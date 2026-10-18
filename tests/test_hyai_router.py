@@ -5,10 +5,10 @@ No dependency on a real Hermes install — ``ctx`` is a minimal in-memory fake
 mirroring only the two methods the plugin actually calls:
 ``get_config(key, default)`` / ``set_config(key, value)`` / ``register_command(...)``.
 """
+
 from __future__ import annotations
 
 import importlib.util
-import sys
 import unittest
 from pathlib import Path
 

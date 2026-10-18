@@ -96,6 +96,21 @@ python3 -m unittest discover -s tests -v
 module installs minimal in-memory fakes for the two internal Hermes modules
 it reads config through).
 
+## Development
+
+CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs `ruff check`,
+`ruff format --check`, and the test suite on every push/PR to `main`.
+
+To get the same lint/format check locally before each commit:
+
+```bash
+./scripts/install-git-hooks.sh   # one-time, installs .git/hooks/pre-commit
+```
+
+The hook runs `ruff check .` and `ruff format --check .` on commit; it
+installs `ruff` for you on first run if it's not already present. Fix with
+`ruff check --fix .` / `ruff format .` as needed.
+
 ## Compatibility
 
 Developed and tested against a specific Hermes Agent checkout as of 2026-10;

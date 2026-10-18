@@ -59,15 +59,18 @@ def _read_routing_state() -> dict[str, Any]:
     try:
         return _read_routing_state_unsafe()
     except Exception as exc:
-        logger.warning("hostyourai: routing-state read failed (%s: %s) — no routing hints applied.",
-                        type(exc).__name__, exc)
+        logger.warning(
+            "hostyourai: routing-state read failed (%s: %s) — no routing hints applied.",
+            type(exc).__name__,
+            exc,
+        )
         return {}
 
 
 def _read_routing_state_unsafe() -> dict[str, Any]:
     """Unguarded body of :func:`_read_routing_state` — never call directly outside a test."""
-    from hermes_cli.plugins_state import _plugin_settings_entry
     from hermes_cli.config import load_config_readonly
+    from hermes_cli.plugins_state import _plugin_settings_entry
 
     entry = _plugin_settings_entry(load_config_readonly() or {}, _ROUTER_PLUGIN_ID)
     if not isinstance(entry, dict):

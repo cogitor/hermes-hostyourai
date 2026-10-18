@@ -6,6 +6,7 @@ runs with zero real Hermes install. Covers the full build_extra_body /
 build_api_kwargs_extras matrix plus the fail-open contract around malformed
 config shapes.
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -15,9 +16,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-_MODULE_PATH = (
-    Path(__file__).resolve().parent.parent / "model-providers" / "hostyourai" / "__init__.py"
-)
+_MODULE_PATH = Path(__file__).resolve().parent.parent / "model-providers" / "hostyourai" / "__init__.py"
 
 
 def _install_fake_hermes_modules(settings_entry):
