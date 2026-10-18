@@ -5,9 +5,9 @@ version: 0.1.0
 
 plugins:
   - repo: cogitor/hermes-hostyourai
-    ref: 2604c3653de73202abf2a58956444192ca2d75a6
+    ref: 606e51b1214833805b14375be5dc4bb5a29c1a2e
     subdir: hyai-router
 
   - repo: cogitor/hermes-hostyourai
-    ref: 2604c3653de73202abf2a58956444192ca2d75a6
+    ref: 606e51b1214833805b14375be5dc4bb5a29c1a2e
     subdir: model-providers/hostyourai
