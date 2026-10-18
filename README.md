@@ -116,6 +116,32 @@ python3 -m unittest discover -s tests -v
 module installs minimal in-memory fakes for the two internal Hermes modules
 it reads config through).
 
+## Troubleshooting
+
+**`/hyai` doesn't appear in Telegram's `/` command menu.** Telegram caps the
+visible bot menu at a small number of slots (Hermes defaults to 60; Telegram's
+own hard limit is 100) and fills it by priority — on an account with many
+commands (built-ins + other plugins + skills), `/hyai` can simply lose that
+ranking fight. Two things to check, in order:
+
+1. **Give `/hyai` a guaranteed slot** — add it to Hermes's Telegram menu
+   priority list and restart the gateway:
+   ```bash
+   hermes config set platforms.telegram.extra.command_menu.priority '["hyai"]'
+   hermes gateway restart
+   ```
+   (`hermes config set` is required — `config.yaml` itself is protected from
+   direct file edits as a security measure.)
+2. **Re-enter the chat.** Telegram clients only reload a bot's command list
+   when you open/enter the chat — they do not live-refresh an already-open
+   chat after `setMyCommands`. If step 1 doesn't seem to have worked, leave
+   the Telegram chat (or switch away and back) rather than assuming the
+   registration failed; `hermes logs` showing `set_my_commands OK` means the
+   server side already succeeded and the gap is client-side caching.
+
+`/hyai` itself still works by typing it manually at any time regardless of
+whether it's in the menu — the menu is a discovery aid, not a requirement.
+
 ## Development
 
 CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs `ruff check`,
