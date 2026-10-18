@@ -24,17 +24,37 @@ imports — either can be installed, updated, or removed independently.
 ## Install
 
 Hermes Agent plugin docs: [Plugins user guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/plugins) ·
-[Build a Hermes Plugin](https://hermes-agent.nousresearch.com/docs/developer-guide/plugins)
+[Build a Hermes Plugin](https://hermes-agent.nousresearch.com/docs/developer-guide/plugins) ·
+[Plugin packs](https://hermes-agent.nousresearch.com/docs/user-guide/features/plugins#plugin-packs)
+
+This repo holds **two plugins** (one `/hyai` slash command, one model-provider
+profile) in separate subdirectories. The easiest way to get both is the
+bundled plugin pack — one command, one consent screen, both pinned to the
+same commit:
 
 ```bash
-hermes plugins install cogitor/hermes-hostyourai --no-enable
+curl -O https://raw.githubusercontent.com/cogitor/hermes-hostyourai/main/hermes-pack.yaml
+hermes plugins pack install ./hermes-pack.yaml
+```
+
+That installs both plugins (disabled by default) — then enable them:
+
+```bash
 hermes plugins enable hyai-router
 hermes plugins enable hostyourai-profile
 ```
 
-Then set `HOSTYOURAI_API_KEY` in your Hermes `.env` / provider setup, as you
-would for any other provider (`hermes config set HOSTYOURAI_API_KEY`, or via
-`hermes model` / `hermes setup`).
+Or install each subdirectory individually if you only want one of the two
+(the `owner/repo/path` form pulls just that folder):
+
+```bash
+hermes plugins install cogitor/hermes-hostyourai/hyai-router --no-enable
+hermes plugins install cogitor/hermes-hostyourai/model-providers/hostyourai --no-enable
+```
+
+Either way, set `HOSTYOURAI_API_KEY` in your Hermes `.env` / provider setup
+afterwards, as you would for any other provider (`hermes config set
+HOSTYOURAI_API_KEY`, or via `hermes model` / `hermes setup`).
 
 ## How to use
 
