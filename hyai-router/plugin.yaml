@@ -1,0 +1,5 @@
+name: hyai-router
+kind: standalone
+version: 0.1.0
+description: /hyai slash command for HostYourAI task/policy routing hints
+author: Emil

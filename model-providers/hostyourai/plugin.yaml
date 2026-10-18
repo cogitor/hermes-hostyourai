@@ -1,0 +1,5 @@
+name: hostyourai-profile
+kind: model-provider
+version: 0.1.0
+description: HostYourAI provider profile (hyai/auto router, task/policy routing hints)
+author: Emil
