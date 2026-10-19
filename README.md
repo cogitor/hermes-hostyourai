@@ -43,7 +43,9 @@ hermes plugins enable hostyourai-profile
 ```
 
 Then add your key (`hermes config set HOSTYOURAI_API_KEY`) and pick the
-provider with `hermes model`. To install just one part:
+provider with `hermes model`. 
+
+To install just one part:
 
 ```bash
 hermes plugins install cogitor/hermes-hostyourai/hyai-router
