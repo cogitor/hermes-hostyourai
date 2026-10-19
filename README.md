@@ -108,5 +108,5 @@ Typing `/hyai` by hand works either way.
 
 ## License and affiliation
 
-[MIT](LICENSE). Not affiliated with or endorsed by Nous Research or
+License: [MIT](LICENSE). Not affiliated with or endorsed by Nous Research or
 HostYourAI; a personal, unofficial integration.
