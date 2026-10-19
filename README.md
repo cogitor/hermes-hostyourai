@@ -62,12 +62,17 @@ Pick `HostYourAI` / model `hyai/auto` as your provider+model (`hermes model`),
 then steer its router with `/hyai`:
 
 ```
-/hyai                      show current task/policy/transport
+/hyai                      show current task/policy
 /hyai task <value>         chat | code | summarise | classify | extract | rag | legal | reason
 /hyai policy <value>       balanced | speed | cost | quality
-/hyai transport <mode>     body (default) | headers
 /hyai off                  clear the hint — hyai/auto decides per request alone
 ```
+
+`/hyai` is a finite-choice (options-mode) command — typing `/hyai ` on a
+surface with command autocomplete (CLI, TUI, Desktop) offers
+`status`/`task`/`policy`/`off`, and once you pick `task`/`policy` it offers
+the valid enum values, so you fill it in like a short dialog rather than
+memorizing the list.
 
 Example — tell the router you're doing a coding task, optimized for speed:
 
@@ -76,11 +81,23 @@ Example — tell the router you're doing a coding task, optimized for speed:
 /hyai policy speed
 ```
 
-Every request to `hyai/auto` after that carries those hints (as
-`extra_body.hyai = {"task": "code", "policy": "speed"}`, or as
-`X-HYAI-Task`/`X-HYAI-Policy` headers if `transport headers` is set) until you
-change them or run `/hyai off`. Run `/hyai` with no arguments any time to see
-the current setting.
+Every request to `hyai/auto` after that carries those hints as
+`extra_body.hyai = {"task": "code", "policy": "speed"}` until you change them
+or run `/hyai off`. Run `/hyai` with no arguments any time to see the current
+setting. **This only ever applies to the `hyai/auto` model** — the provider
+profile checks the active model with a strict equality match before adding
+any hint; any other model (a different HostYourAI model, or any other
+provider entirely) gets no `hyai` field added to its request at all.
+
+Transport (request body vs. `X-HYAI-Task`/`X-HYAI-Policy` headers) is **not**
+a per-call choice — it's a one-off setting for people behind a proxy/WAF that
+strips custom headers:
+
+```
+hermes config set plugins.entries.hyai-router.settings.hyai_routing.transport headers
+```
+
+Defaults to `body` if unset.
 
 Task/policy enums mirror HostYourAI's own n8n community node
 (`HostYourAiChatModel`), so a Hermes session and an n8n workflow route the

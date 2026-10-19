@@ -15,13 +15,28 @@ set is effectively ``--global`` today, since there is no plugin-visible
 per-session store wired to the request path. ``--global`` is accepted and
 kept as a no-op/compat flag in case a session-scoped channel is added later.
 
+``argument_mode="options"`` tells CLI/TUI/Desktop surfaces this command has a
+finite completion list rather than free text, so typing ``/hyai `` offers
+``task``/``policy``/``status``/``off`` and, once a sub-command is picked,
+their own enum values — the closest thing to a fill-in dialog a general
+slash-command plugin can drive (there is no plugin-facing modal/picker hook;
+see ``plugins/AGENTS.md`` "Plugins never touch core"). Surfaces that don't
+implement options-mode completion (plain text adapters) still work — the
+handler accepts typed text identically either way.
+
 Usage:
-    /hyai                      show current task/policy/transport
+    /hyai                      show current task/policy
     /hyai status               same as above
     /hyai task <value>         set sticky task (see HYAI_TASKS)
     /hyai policy <value>       set sticky policy (see HYAI_POLICIES)
-    /hyai transport <body|headers>   choose body vs X-HYAI-* headers
     /hyai off | clear          remove the override, let hyai/auto decide alone
+
+Transport (body vs ``X-HYAI-*`` headers) is NOT a per-call choice — it is a
+one-off config knob for people hitting a proxy/WAF that strips custom
+headers. Set it directly in config.yaml (``hermes config set
+plugins.entries.hyai-router.settings.hyai_routing.transport headers``) or
+hand-edit; it is not exposed as an ``/hyai`` subcommand because nobody should
+be flipping it per request.
 
 Future extension point: HostYourAI has floated a Jev-like auto-classify mode
 (not shipped as of 2026-10-18) that would pick ``task`` per-turn from the
@@ -36,14 +51,16 @@ from __future__ import annotations
 
 HYAI_TASKS = ("chat", "code", "summarise", "classify", "extract", "rag", "legal", "reason")
 HYAI_POLICIES = ("balanced", "speed", "cost", "quality")
-HYAI_TRANSPORTS = ("body", "headers")
+HYAI_TRANSPORTS = ("body", "headers")  # config-only; see module docstring
 
 CONFIG_KEY = "hyai_routing"  # read by the hostyourai provider profile too
+_SUBCOMMANDS = ("status", "task", "policy", "off", "clear")
 _USAGE = (
-    "Usage: /hyai [status|task <value>|policy <value>|transport <body|headers>|off|clear]\n"
-    f"  task:      {'|'.join(HYAI_TASKS)}\n"
-    f"  policy:    {'|'.join(HYAI_POLICIES)}\n"
-    f"  transport: {'|'.join(HYAI_TRANSPORTS)}"
+    "Usage: /hyai [status|task <value>|policy <value>|off|clear]\n"
+    f"  task:   {'|'.join(HYAI_TASKS)}\n"
+    f"  policy: {'|'.join(HYAI_POLICIES)}\n"
+    "  transport is config-only, not a per-call choice: "
+    "hermes config set plugins.entries.hyai-router.settings.hyai_routing.transport <body|headers>"
 )
 
 
@@ -53,7 +70,7 @@ def _format_status(state: dict) -> str:
     return (
         f"HostYourAI routing: task={state.get('task') or '(unset)'} "
         f"policy={state.get('policy') or '(unset)'} "
-        f"transport={state.get('transport', 'body')}"
+        f"transport={state.get('transport', 'body')} (config-only)"
     )
 
 
@@ -71,7 +88,8 @@ def register(ctx) -> None:
 
         cmd = parts[0].lower()
         if cmd in ("off", "clear"):
-            ctx.set_config(CONFIG_KEY, {})
+            # Transport is a config-only knob — preserve it across a routing clear.
+            ctx.set_config(CONFIG_KEY, {"transport": state["transport"]} if state.get("transport") else {})
             return "HostYourAI routing cleared — hyai/auto decides per request."
 
         if cmd == "task":
@@ -88,17 +106,12 @@ def register(ctx) -> None:
             ctx.set_config(CONFIG_KEY, state)
             return _format_status(state)
 
-        if cmd == "transport":
-            if len(parts) < 2 or parts[1].lower() not in HYAI_TRANSPORTS:
-                return f"Unknown transport.\n{_USAGE}"
-            state = {**state, "transport": parts[1].lower()}
-            ctx.set_config(CONFIG_KEY, state)
-            return _format_status(state)
-
         return _USAGE
 
     ctx.register_command(
         "hyai",
         handler=_handle_hyai,
         description="Set HostYourAI (hyai/auto) task/policy routing hints",
+        args_hint="<status|task|policy|off> [value]",
+        argument_mode="options",
     )
