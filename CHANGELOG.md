@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.10
+- README: affiliation note restored, Development and License sections, install steps.
+- Bug report issue template; private vulnerability reporting enabled.
+- GitHub Releases are now published by the release script.
+
 ## 0.1.9
 - SECURITY.md, CHANGELOG.md, CI job that validates both plugins against Hermes.
 - Hook installer no longer overwrites an existing pre-commit hook.
