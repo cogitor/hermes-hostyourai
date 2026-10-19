@@ -27,11 +27,11 @@ grep -q "badge/version-v$VER-blue" README.md || { echo "release: README version 
 git add hyai-router/plugin.yaml model-providers/hostyourai/plugin.yaml README.md
 # --no-verify: the pack still names the old version here, so the version-sync tests cannot pass yet.
 # The full gate runs on the pin commit below, when everything is consistent.
-git commit -q --no-verify -m "release: v$VER"
-PRE_RELEASE_HEAD="$(git rev-parse HEAD~1)"; BASE="$PRE_RELEASE_HEAD"
+git commit -q --no-verify -m "release: v$VER" || { git restore --staged --worktree .; echo "release: release commit failed" >&2; exit 1; }
+BASE="$(git rev-parse HEAD~1)"
 SHA="$(git rev-parse HEAD)"
 # Every rollback below resets to BASE, the commit this release started from.
-rollback() { [ "$(git rev-parse --verify -q "$BASE")" = "$BASE" ] && git reset -q --hard "$BASE"; }
+rollback() { [ "$(git rev-parse --verify -q "$BASE")" = "$BASE" ] && git reset -q --hard "$BASE" || echo "release: WARNING rollback could not resolve $BASE; check git log" >&2; }
 
 # 2) Pack manifest: pin both plugins to the release commit.
 sed -i -E "s/^version: .*/version: $VER/; s/^( *ref: ).*/\\1$SHA/" hermes-pack.yaml

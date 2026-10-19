@@ -43,6 +43,13 @@ class ScanTests(unittest.TestCase):
             with self.subTest(name):
                 self.assertTrue(self._scan(line), f"{name} not flagged")
 
+    def test_pathological_long_lines_finish_quickly(self):
+        import time
+
+        t = time.time()
+        self._scan("a." * 30000 + "\n" + "10." * 30000 + "\n" + "x" * 60000)
+        self.assertLess(time.time() - t, 3)
+
     def test_clean_and_allowed_lines_pass(self):
         self.assertEqual(self._scan("x = 1\npath = '/home/<user>/.hermes'\nuser@example.com\n"), [])
         self.assertEqual(self._scan("/home/" + "someone/x  # scan: allow"), [])
