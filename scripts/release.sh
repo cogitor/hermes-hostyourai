@@ -20,7 +20,9 @@ SHA="$(git rev-parse HEAD)"
 sed -i -E "s/^version: .*/version: $VER/; s/^( *ref: ).*/\1$SHA/" hermes-pack.yaml
 grep -q "^version: $VER$" hermes-pack.yaml && [ "$(grep -c "ref: $SHA" hermes-pack.yaml)" -ge 2 ] \
   || { echo "release: manifest rewrite did not apply (unexpected format?)" >&2; git checkout -- hermes-pack.yaml; exit 1; }
-git add hermes-pack.yaml
+sed -i -E "s#badge/version-v[0-9.]+-blue#badge/version-v$VER-blue#" README.md
+grep -q "badge/version-v$VER-blue" README.md || { echo "release: README version badge missing" >&2; git checkout -- hermes-pack.yaml README.md; exit 1; }
+git add hermes-pack.yaml README.md
 git commit -q -m "hermes-pack: bump to v$VER, pin to ${SHA:0:7}"
 python3 -m unittest tests.test_manifest_sync || { git reset -q --hard "$SHA"; echo "release: manifest test failed, bump commit rolled back" >&2; exit 1; }
 git tag -a "v$VER" -m "v$VER"

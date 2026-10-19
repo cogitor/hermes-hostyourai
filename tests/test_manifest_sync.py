@@ -33,6 +33,10 @@ class ManifestSyncTests(unittest.TestCase):
         self.assertEqual(len(set(self.refs)), 1, "all plugins must pin the same commit")
         self.assertRegex(self.refs[0], r"^[0-9a-f]{40}$", "pin must be a full SHA")
 
+    def test_readme_version_badge_matches_manifest(self):
+        readme = (ROOT / "README.md").read_text()
+        self.assertIn(f"badge/version-v{self.version}-blue", readme)
+
     def test_pin_resolves_to_a_commit_in_this_repo(self):
         if git("rev-parse", "--git-dir") is None or git("cat-file", "-t", "HEAD") is None:
             self.skipTest("no git history")
