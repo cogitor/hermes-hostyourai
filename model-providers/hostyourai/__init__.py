@@ -16,9 +16,7 @@ beyond the key name) and applies it on every real request via
 (``agent/transports/chat_completions.py::_build_kwargs_from_profile``) always
 calls for the active provider.
 
-Wire shape (mirrors the HostYourAI n8n community node,
-``HostYourAiChatModel/model.ts::buildRequest``, so a Hermes session and an n8n
-workflow route identically):
+Wire shape:
   - transport "body" (default): ``extra_body["hyai"] = {"task": ..., "policy": ...}``
   - transport "headers": ``X-HYAI-Task`` / ``X-HYAI-Policy`` request headers
 
@@ -36,8 +34,7 @@ from providers.base import ProviderProfile
 
 logger = logging.getLogger(__name__)
 
-# Source of truth: HostYourAiChatModel.node.ts (n8n community node). Keep these
-# two lists in sync manually if HostYourAI adds/renames task or policy values.
+# The task and policy values HostYourAI accepts. Update these if it adds or renames any.
 HYAI_TASKS = ("chat", "code", "summarise", "classify", "extract", "rag", "legal", "reason")
 HYAI_POLICIES = ("balanced", "speed", "cost", "quality")
 HYAI_DEFAULT_MODEL = "hyai/auto"
