@@ -27,3 +27,4 @@ backups/
 .venv/
 venv/
 .ruff_cache/
+*.whl

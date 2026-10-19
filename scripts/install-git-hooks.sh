@@ -6,7 +6,13 @@ set -euo pipefail
 repo_root="$(git rev-parse --show-toplevel)"
 hooks_dir="$repo_root/.git/hooks"
 
-ln -sf "../../scripts/pre-commit" "$hooks_dir/pre-commit"
+target="$hooks_dir/pre-commit"
+if [ -e "$target" ] && [ ! -L "$target" ]; then
+  echo "install-git-hooks: $target already exists and is not a symlink; leaving it alone." >&2
+  echo "Move it aside and rerun to install the repo hook." >&2
+  exit 1
+fi
+ln -sf "../../scripts/pre-commit" "$target"
 chmod +x "$repo_root/scripts/pre-commit"
 
 echo "Installed pre-commit hook -> scripts/pre-commit"
