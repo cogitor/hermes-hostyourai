@@ -44,7 +44,8 @@ jobs:
           python-version: "3.12"
 
       - name: Install Hermes
-        run: pip install hermes-agent
+        # PyPI's hermes-agent is old and has no `plugins validate`; install from source.
+        run: pip install "git+https://github.com/NousResearch/hermes-agent@v0.22.2"
 
       - name: Validate both plugins
         run: |
