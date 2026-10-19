@@ -39,3 +39,8 @@ Standalone, unofficial Hermes Agent plugin pack (NOT upstream): a `hostyourai` p
 - README must keep the disclosure section accurate: network target, credential path, `config.yaml` write, read-only `state.db` read, no telemetry, no self-update. Update it whenever behavior changes (catalog rule 13: undisclosed behavior = changes requested).
 - Known review risk: reading `state.db` `gateway_routing` (private schema) and the underscore-private `_plugin_settings_entry`. Proper fix is an upstream hook-request issue ("pass selected provider/model to command handlers"); until then fail closed and keep it documented. No monkeypatching, no core overrides.
 - Plan and decision log: Obsidian `wiki/homelab/hyai-hermes-plugin-plan.md` (not in this repo).
+
+## CI and release notes
+- The `validate` CI job clones Hermes at a pinned tag and installs it editable on Python 3.14. Hermes refuses wheel builds and PyPI's copy is old, so `pip install hermes-agent` does not work.
+- Add a line to `CHANGELOG.md` before every `scripts/release.sh`. Never commit `*.whl` or other build output (the secret scan rejects binaries).
+- Dependabot PRs: verify the new action SHA against the upstream tag with `git ls-remote` before merging.
