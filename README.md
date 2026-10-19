@@ -9,7 +9,7 @@ and tell its automatic model picker what kind of work you are doing.
 
 ## Why HostYourAI?
 
-- **EU-only hosting.** Switch on "EU only" for your key in HostYourAI and
+- 🇪🇺 **EU-only hosting.** Switch on "EU only" for your key in HostYourAI and
   every request stays on sovereign, open-weight models. Read more:
   [EU Inference Router](https://hostyourai.com/en/service/eu-inference-router).
 - **Automatic model choice.** The `hyai/auto` model picks a suitable warm
