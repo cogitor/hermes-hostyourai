@@ -100,11 +100,13 @@ hermes gateway restart
 
 Typing `/hyai` by hand works either way.
 
-## Contributing
+## Development
 
-See [AGENTS.md](AGENTS.md) for how the repo is built, tested and released.
+- [AGENTS.md](AGENTS.md): how the repo is built, tested and released.
+- [CHANGELOG.md](CHANGELOG.md): what changed in each version.
+- [SECURITY.md](SECURITY.md): how to report a vulnerability.
 
-[MIT](LICENSE).
+## License and affiliation
 
-Not affiliated with or endorsed by Nous Research or HostYourAI; a personal,
-unofficial integration.
+[MIT](LICENSE). Not affiliated with or endorsed by Nous Research or
+HostYourAI; a personal, unofficial integration.
