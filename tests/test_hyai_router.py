@@ -106,6 +106,20 @@ class HyaiCommandTestCase(unittest.TestCase):
         self.assertEqual(mod._active_model(), ("hostyourai", "hyai/auto"))
         self.assertIsNone(mod._not_applicable())
 
+    def test_missing_routing_row_falls_back_to_config(self):
+        # A local/TUI/dashboard session with a session key but no gateway_routing row:
+        # the config default is what's actually in effect, so it must not read "unknown".
+        # SPEC R12.
+        mod = _load_module()
+
+        def raise_lookup():
+            raise LookupError("no routing row for session 'k'")
+
+        mod._session_route = raise_lookup
+        mod._config_route = lambda: ("hostyourai", "hyai/auto")
+        self.assertEqual(mod._active_model(), ("hostyourai", "hyai/auto"))
+        self.assertIsNone(mod._not_applicable())
+
     def test_unreadable_state_fails_closed(self):
         mod = _load_module()
 
@@ -353,6 +367,34 @@ class RealRoutingReadTests(unittest.TestCase):
         with mock.patch.dict(sys.modules, mods), mock.patch.dict(os.environ, {}, clear=False):
             os.environ.pop("HERMES_SESSION_KEY", None)
             self.assertEqual(self.mod._session_route(), ("", ""))
+
+    def test_bound_key_with_no_row_raises_lookup_error_from_real_db(self):
+        # SPEC R12, end-to-end: a real session key bound against a real (empty) state.db
+        # with no matching row. _session_route must raise LookupError (not return ("","")),
+        # and _active_model must recover it to the config default rather than "unknown".
+        import os
+        from unittest import mock
+
+        fake_gsc = types.ModuleType("gateway.session_context")
+        fake_gsc.get_session_env = lambda name, default="": os.environ.get(name, default)
+        fake_hc = types.ModuleType("hermes_constants")
+        home = Path(self.tmp.name)
+        (home / "sessions").mkdir(exist_ok=True)
+        fake_hc.get_hermes_home = lambda: home
+        mods = {
+            "gateway": types.ModuleType("gateway"),
+            "gateway.session_context": fake_gsc,
+            "hermes_constants": fake_hc,
+        }
+        with (
+            mock.patch.dict(sys.modules, mods),
+            mock.patch.dict(os.environ, {"HERMES_SESSION_KEY": "no-such-row"}),
+        ):
+            with self.assertRaises(LookupError):
+                self.mod._session_route()
+            self.mod._config_route = lambda: ("hostyourai", "hyai/auto")
+            self.assertEqual(self.mod._active_model(), ("hostyourai", "hyai/auto"))
+            self.assertIsNone(self.mod._not_applicable())
 
     def test_config_plain_string_model_is_accepted(self):
         import sys as _sys

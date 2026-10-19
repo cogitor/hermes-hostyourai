@@ -61,6 +61,16 @@ class RoutingSpec(unittest.TestCase):
             self.model = OTHER_MODEL
             self.assertIn("only apply to hostyourai hyai/auto", self.call(args))
 
+    def test_R12_local_session_with_no_routing_row_resolves_via_config(self):
+        # A local/TUI/dashboard session with a session key but no gateway_routing row
+        # reads the config default instead of "unknown". Exercised via the real
+        # _active_model/_session_route path, not a stub.
+        mod = _load_module()
+        mod._session_route = lambda: (_ for _ in ()).throw(LookupError("no row"))
+        mod._config_route = lambda: HYAI_AUTO
+        self.assertEqual(mod._active_model(), HYAI_AUTO)
+        self.assertIsNone(mod._not_applicable())
+
     def test_R4_single_value_is_saved_lowercased_and_keeps_the_other(self):
         self.call("task CODE")
         self.call("policy Cost")

@@ -52,28 +52,34 @@ class PrivateChatRules(unittest.TestCase):
     """Which sessions may see the balance. Anything not proven private is refused."""
 
     CASES = [
-        # (bound session vars, gateway process running, allowed)
+        # (bound session vars, gateway context has been engaged, allowed)
         ({"HERMES_SESSION_CHAT_TYPE": "dm"}, False, True),
         ({"HERMES_SESSION_CHAT_TYPE": "DM"}, False, True),
         ({"HERMES_SESSION_CHAT_TYPE": "group"}, False, False),
         ({"HERMES_SESSION_CHAT_TYPE": "channel"}, False, False),
         ({"HERMES_SESSION_CHAT_TYPE": "thread"}, False, False),
         ({"HERMES_SESSION_CHAT_TYPE": "something-new"}, False, False),
+        ({"HERMES_SESSION_PLATFORM": "api_server"}, True, True),  # Hermes dashboard
         ({"HERMES_SESSION_PLATFORM": "telegram"}, False, False),  # gateway chat, type unknown
         ({"HERMES_SESSION_KEY": "k"}, False, False),
-        ({"HERMES_SESSION_SOURCE": "tui", "HERMES_SESSION_KEY": "k"}, False, False),  # cannot prove a DM
+        (
+            {"HERMES_SESSION_SOURCE": "tui", "HERMES_SESSION_KEY": "k"},
+            False,
+            True,
+        ),  # TUI/dashboard proves local
         ({"HERMES_SESSION_SOURCE": "cli"}, False, True),
         ({"HERMES_SESSION_SOURCE": "TUI"}, False, True),
         ({"HERMES_SESSION_SOURCE": "desktop"}, False, True),
         ({"HERMES_SESSION_SOURCE": "telegram"}, False, False),
         ({"HERMES_SESSION_SOURCE": "kanban"}, False, False),
-        ({}, False, True),  # plain CLI process
+        ({}, False, True),  # plain CLI process, even if gateway modules were imported
         ({}, True, False),  # gateway process whose session context was lost
     ]
 
-    def stub_hermes(self, get_session_env, gateway_running=False):
+    def stub_hermes(self, get_session_env, context_engaged=False):
         context = types.ModuleType("gateway.session_context")
         context.get_session_env = get_session_env
+        context.session_context_engaged = lambda: context_engaged
         names = ("gateway", "gateway.session_context", "gateway.run")
         saved = {name: sys.modules.get(name) for name in names}
         for name, module in saved.items():
@@ -81,16 +87,14 @@ class PrivateChatRules(unittest.TestCase):
                 sys.modules.__setitem__, name, module
             )
         sys.modules["gateway"], sys.modules["gateway.session_context"] = types.ModuleType("gateway"), context
-        if gateway_running:
-            sys.modules["gateway.run"] = types.ModuleType("gateway.run")
-        else:
-            sys.modules.pop("gateway.run", None)
+        # Importing gateway helpers is normal during CLI plugin startup; it must not make the CLI public.
+        sys.modules["gateway.run"] = types.ModuleType("gateway.run")
 
     def test_rules(self):
         mod = _load_module()
-        for env, gateway_running, allowed in self.CASES:
-            with self.subTest(env=env, gateway_running=gateway_running):
-                self.stub_hermes(lambda name, default="", env=env: env.get(name, default), gateway_running)
+        for env, context_engaged, allowed in self.CASES:
+            with self.subTest(env=env, context_engaged=context_engaged):
+                self.stub_hermes(lambda name, default="", env=env: env.get(name, default), context_engaged)
                 self.assertIs(mod._private_chat(), allowed)
 
     def test_unreadable_session_context_is_refused(self):

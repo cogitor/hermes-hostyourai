@@ -15,7 +15,9 @@ Standalone, unofficial Hermes Agent plugin pack (NOT upstream): a `hostyourai` p
 - **Request gate is strict equality** `model == "hyai/auto"` in the provider. That is the real safeguard; the `/hyai` command gate is UX only.
 - **No speculative code** for Hermes APIs that have not shipped (e.g. a picker hook). Propose upstream instead.
 - **Transport is never mentioned** in `/hyai` output, help or README. It is config-only; `/hyai off` must preserve a hand-set value.
-- **Config default is not the active model.** The truth is the chat's `/model` choice. The command gate reads the persisted override from `state.db` table `gateway_routing` (`scope` + `session_key` from `HERMES_SESSION_KEY`, read-only `mode=ro` connection, URI-quoted path), and fails closed (missing row or error => refuse). `HERMES_SESSION_ID` is NOT set for plugin handlers. `/model --once` is memory-only and invisible; documented limit.
+- **Config default is not the active model.** The truth is the chat's `/model` choice. The command gate reads the persisted override from `state.db` table `gateway_routing` (`scope` + `session_key` from `HERMES_SESSION_KEY`, read-only `mode=ro` connection, URI-quoted path), and fails closed on a genuine error (refuse). A session key with no row at all (a local/TUI/
+  dashboard session that never set `/model`) is not an error — it reads the config default,
+  same as a CLI session with no key. `HERMES_SESSION_ID` is NOT set for plugin handlers. `/model --once` is memory-only and invisible; documented limit.
 - **Telegram menu:** a plugin command's `args_hint` must not start with `<`, or Hermes hides it from the menu.
 - Hermes reads state via its own paths: use `get_hermes_home()`, never hardcode `~/.hermes`.
 

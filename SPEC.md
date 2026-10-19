@@ -23,14 +23,18 @@ is "not on hyai/auto".
 - **R9** `/hyai help` shows usage. Works on any model.
 - **R10** The word "transport" never appears in any reply.
 - **R11** The saved setting is sent only to hyai/auto, by the provider profile (strict match).
+- **R12** A local surface (CLI, TUI, desktop, or the Hermes dashboard) with no recorded `/model`
+  override reads its effective model from the config default, so it stays determinable instead
+  of reading as "unknown".
 
 ## Usage (`/hyai usage`)
 
 - **U1** Works on any model. Never changes the saved setting.
 - **U2** Shows balance, spend this month, auto top-up on/off, and "as of" in local time
   (`Jan 01, 13:00`). Amounts look like `€12.34`.
-- **U3** Only in a direct message or the local CLI. A group, a channel, an unknown chat type,
-  or a lost session context is refused, and no network request is made.
+- **U3** Only in a direct message, the local CLI, or the Hermes dashboard. A group, a channel,
+  an unknown messaging chat type, or a lost messaging session context is refused, and no network
+  request is made.
 - **U4** One `GET /balance` per call, with the key as a Bearer header, to the HostYourAI API
   address only. Redirects are never followed. The body is capped at 2 MB. Timeout 5 s.
 - **U5** The answer is remembered for 60 s, per API key. Failures are not remembered.

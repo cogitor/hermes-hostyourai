@@ -80,7 +80,8 @@ turns it off again. `/hyai` shows what the last message got.
 
 `/hyai usage` shows your HostYourAI balance, this month's spend and whether
 auto top-up is on, straight from your account. It answers only in a private
-chat or the local CLI, never in a group, and works on any model.
+chat, the local CLI, or the Hermes dashboard; never in a group. It works on
+any model.
 
 The setting sticks until you change it, and it is shared: it applies to every
 chat on the same Hermes profile, and anyone who can use `/hyai` there can

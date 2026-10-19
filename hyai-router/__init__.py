@@ -10,7 +10,7 @@ profile. ``status`` and ``usage`` work on any model; changing the routing only a
     /hyai policy <value>       set sticky policy (see HYAI_POLICIES)
     /hyai code cost            shorthand: task and/or policy in any order
     /hyai off | clear          remove the override, let hyai/auto decide alone
-    /hyai usage                balance and this month's spend (private chat only)
+    /hyai usage                balance and this month's spend (private chat, CLI, or dashboard only)
 """
 
 from __future__ import annotations
@@ -20,7 +20,6 @@ import logging
 import math
 import os
 import random
-import sys
 import threading
 import time
 import urllib.error
@@ -50,7 +49,11 @@ _COMPACTION_PREFIX = "[CONTEXT "  # how Hermes starts the summary it puts in pla
 _BALANCE_TTL = 60.0
 _HTTP_TIMEOUT = 5.0
 _LOCAL_SOURCES = ("cli", "tui", "desktop", "local")
-_PRIVATE_ONLY = "Balance and spend are only shown in a private chat (or the local CLI). Nothing was fetched."
+_DASHBOARD_PLATFORM = "api_server"
+_PRIVATE_ONLY = (
+    "Balance and spend are only shown in a private chat, the local CLI, or the Hermes dashboard. "
+    "Nothing was fetched."
+)
 _HTTP_ERRORS = {401: "key rejected by HostYourAI", 403: "this endpoint needs a personal key, not a team key"}
 
 
@@ -130,6 +133,12 @@ def _active_model() -> tuple[str, str]:
         if not model:
             return _config_route()
         return provider, model
+    except LookupError:
+        # A session key exists but has no routing row: a local/TUI/dashboard session that
+        # hasn't persisted a /model override. The config default is what's actually in
+        # effect (same as a CLI/empty-session reading it) — fall back to it rather than
+        # reporting the model as undeterminable.
+        return _config_route()
     except Exception as exc:
         logger.debug("hyai: could not determine active model, refusing: %r", exc)
         return "", ""
@@ -145,20 +154,28 @@ def _not_applicable() -> str | None:
 
 
 def _private_chat() -> bool:
-    """True for a DM or the local CLI/TUI; anything else, including any error, is refused."""
+    """True for a DM, local interactive surface, or the dashboard; refuse all other contexts."""
     try:
-        from gateway.session_context import get_session_env
+        from gateway.session_context import get_session_env, session_context_engaged
 
         chat_type = (get_session_env("HERMES_SESSION_CHAT_TYPE") or "").strip().lower()
         if chat_type:
             return chat_type == "dm"
-        if get_session_env("HERMES_SESSION_PLATFORM") or get_session_env("HERMES_SESSION_KEY"):
-            return False  # gateway session of unknown type
+        platform = (get_session_env("HERMES_SESSION_PLATFORM") or "").strip().lower()
+        if platform:
+            return platform == _DASHBOARD_PLATFORM
         source = (get_session_env("HERMES_SESSION_SOURCE") or "").strip().lower()
         if source:
+            # Local surfaces bind a source (cli/tui/desktop/local) — that is proof of a
+            # non-messaging surface even when a session key is also bound (TUI in the
+            # dashboard binds both). Check it before the key guard so the dashboard and
+            # embedded TUI are not treated as an unknown messaging session.
             return source in _LOCAL_SOURCES
-        # Nothing bound is the plain CLI, but also a gateway command that lost its context.
-        return "gateway.run" not in sys.modules
+        if get_session_env("HERMES_SESSION_KEY"):
+            return False  # messaging session of unknown type
+        # A plain CLI binds no gateway session. Do not infer otherwise from imported modules:
+        # the CLI may import gateway helpers while starting plugins.
+        return not session_context_engaged()
     except Exception as exc:
         logger.debug("hyai: chat type undeterminable, refusing usage: %r", exc)
         return False

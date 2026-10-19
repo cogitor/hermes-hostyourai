@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+- Fix: `/hyai usage` now works in the local CLI and Hermes dashboard while
+  retaining its private-chat protection for messaging platforms.
+- Fix: routing hints (`/hyai task`/`policy`) no longer show as inapplicable for a
+  local/dashboard session with no saved `/model` override — the config default is
+  used instead.
+
 ## 0.3.0
 - `/hyai task auto`: a small HostYourAI model picks the task for each message from the
   start of it and of the message before it. Opt-in; any other task turns it off.
