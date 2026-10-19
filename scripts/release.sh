@@ -21,13 +21,13 @@ scripts/check.sh
 sed -i -E "s/^version: .*/version: $VER/" hyai-router/plugin.yaml model-providers/hostyourai/plugin.yaml
 sed -i -E "s#badge/version-v[0-9.]+-blue#badge/version-v$VER-blue#" README.md
 for f in hyai-router/plugin.yaml model-providers/hostyourai/plugin.yaml; do
-  grep -q "^version: $VER$" "$f" || { echo "release: $f version rewrite did not apply" >&2; git checkout -- .; exit 1; }
+  grep -q "^version: $VER$" "$f" || { echo "release: $f version rewrite did not apply" >&2; git restore --staged --worktree .; exit 1; }
 done
-grep -q "badge/version-v$VER-blue" README.md || { echo "release: README version badge missing" >&2; git checkout -- .; exit 1; }
+grep -q "badge/version-v$VER-blue" README.md || { echo "release: README version badge missing" >&2; git restore --staged --worktree .; exit 1; }
 git add hyai-router/plugin.yaml model-providers/hostyourai/plugin.yaml README.md
 git commit -q -m "release: v$VER"
-SHA="$(git rev-parse HEAD)"
 BASE="$(git rev-parse HEAD~1)"
+SHA="$(git rev-parse HEAD)"
 scripts/check.sh || { git reset -q --hard "$BASE"; echo "release: gate failed on release commit, rolled back" >&2; exit 1; }
 
 # 2) Pack manifest: pin both plugins to the release commit.
@@ -39,7 +39,8 @@ git commit -q -m "hermes-pack: bump to v$VER, pin to ${SHA:0:7}"
 python3 -m unittest tests.test_manifest_sync || { git reset -q --hard "$BASE"; echo "release: manifest test failed, release rolled back" >&2; exit 1; }
 git tag -a "v$VER" -m "v$VER"
 if [ "$PUSH" = 1 ]; then
-  git push --atomic origin main "v$VER"
+  git push --atomic origin main "v$VER" \
+    || { echo "release: push failed; local release commits and tag remain. To retry cleanly: git tag -d v$VER && git reset --hard $BASE" >&2; exit 1; }
   [ "$(git ls-remote origin "refs/tags/v$VER^{}" | cut -f1)" = "$(git rev-parse "v$VER^{commit}")" ] \
     || { echo "release: remote tag does not match local" >&2; exit 1; }
 fi
