@@ -227,8 +227,10 @@ def _eur(value: float) -> str:
 def _when(value) -> str:
     """An ISO timestamp as local 'Oct 19, 10:42'; empty if it is not one."""
     try:
-        return datetime.fromisoformat(value).astimezone().strftime("%b %d, %H:%M")
-    except (TypeError, ValueError, OverflowError):
+        # Python before 3.11 does not accept a trailing "Z".
+        stamp = value[:-1] + "+00:00" if value.endswith("Z") else value
+        return datetime.fromisoformat(stamp).astimezone().strftime("%b %d, %H:%M")
+    except (AttributeError, TypeError, ValueError, OverflowError):
         return ""
 
 

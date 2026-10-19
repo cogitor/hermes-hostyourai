@@ -149,6 +149,16 @@ class UsageReplyTests(UsageTestCase):
         reply = self.call("usage")
         self.assertRegex(reply, r"As of: \w{3} \d{2}, \d{2}:\d{2}\b")
         self.assertNotIn("2026-01-01T", reply)
+        for stamp in (
+            "2026-01-01T13:00:00Z",
+            "2026-01-01T13:00:00+00:00",
+            "2026-01-01T13:00:00.123456Z",
+            "2026-01-01T13:00:00",
+        ):
+            with self.subTest(stamp=stamp):
+                self.mod._cache = None
+                self.response = ok({**BALANCE, "as_of": stamp})
+                self.assertIn("As of: Jan 01", self.call("usage"))  # reached on Python 3.10 too
         for bad in ({"x": 1}, "x" * 500, "", None, 12345):
             with self.subTest(bad=bad):
                 self.mod._cache = None

@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.1
+- Fix: the "As of" line in `/hyai usage` was missing on Python 3.10 (timestamps ending in `Z`).
+
 ## 0.2.0
 - `/hyai usage`: balance, this month's spend and auto top-up from your HostYourAI
   account, with a low-balance note below `usage_warn_eur` (default 5).

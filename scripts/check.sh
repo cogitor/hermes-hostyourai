@@ -11,6 +11,10 @@ echo "check: ruff check";         $RUFF check .
 echo "check: ruff format";        $RUFF format --check .
 echo "check: secret scan";        python3 scripts/scan_secrets.py
 echo "check: tests";              python3 -m unittest discover -s tests
+# The oldest supported Python (plugin.yaml floor); CI also runs it, this catches it before a push.
+if command -v uv >/dev/null 2>&1; then
+  echo "check: tests on python 3.10"; uv run --python 3.10 --no-project python -m unittest discover -s tests
+fi
 if command -v hermes >/dev/null 2>&1; then
   echo "check: hermes plugins validate"
   for d in hyai-router model-providers/hostyourai; do out="$(hermes plugins validate "$d" --install-deps 2>&1)" || { echo "$out" >&2; echo "check: hermes validate failed for $d" >&2; exit 1; }; done
