@@ -105,3 +105,6 @@ Typing `/hyai` by hand works either way.
 See [AGENTS.md](AGENTS.md) for how the repo is built, tested and released.
 
 [MIT](LICENSE).
+
+Not affiliated with or endorsed by Nous Research or HostYourAI; a personal,
+unofficial integration.
