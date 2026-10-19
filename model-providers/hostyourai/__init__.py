@@ -87,7 +87,9 @@ def _read_routing_state_unsafe() -> dict[str, Any]:
     # only ever persists valid values — a hand-edited config.yaml, or header-injection via
     # control characters in task/policy, must never reach the wire unchecked.
     task, policy = state.get("task"), state.get("policy")
-    if task is not None and task not in HYAI_TASKS:
+    if task == "auto":  # set by the hyai-router plugin: it adds the real task per message itself
+        state.pop("task")
+    elif task is not None and task not in HYAI_TASKS:
         logger.warning("hostyourai: ignoring invalid persisted task %r (not in %s)", task, HYAI_TASKS)
         state.pop("task", None)
     if policy is not None and policy not in HYAI_POLICIES:

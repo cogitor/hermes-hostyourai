@@ -9,6 +9,7 @@ import time
 import unittest
 from pathlib import Path
 
+import test_hyai_auto
 from test_hyai_router import FakeCtx, _load_module
 from test_hyai_usage import BALANCE, FAKE_KEY, UsageTestCase, ok
 
@@ -19,9 +20,9 @@ HYAI_AUTO = ("hostyourai", "hyai/auto")
 
 class SpecCoverage(unittest.TestCase):
     def test_every_rule_in_the_spec_has_a_test(self):
-        rules = set(re.findall(r"^- \*\*([RU]\d+)\*\*", (ROOT / "SPEC.md").read_text(), re.M))
-        self.assertGreaterEqual(len(rules), 20)
-        names = " ".join(dir(RoutingSpec) + dir(UsageSpec))
+        rules = set(re.findall(r"^- \*\*([RUA]\d+)\*\*", (ROOT / "SPEC.md").read_text(), re.M))
+        self.assertGreaterEqual(len(rules), 30)
+        names = " ".join(dir(RoutingSpec) + dir(UsageSpec) + dir(test_hyai_auto.AutoSpec))
         self.assertEqual(sorted(r for r in rules if f"test_{r}_" not in names), [])
 
 

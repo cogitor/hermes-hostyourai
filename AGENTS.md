@@ -30,6 +30,19 @@ Standalone, unofficial Hermes Agent plugin pack (NOT upstream): a `hostyourai` p
 - Mock Hermes with `sys.modules` fakes (see `tests/test_hostyourai_provider.py`, `tests/test_hyai_user_journeys.py`); no real Hermes install is needed.
 - Any change to the gate, provider hooks or release tooling needs an independent review pass before pushing, and a full gate run.
 
+## Auto task mode (how it was built)
+- `/hyai task auto` = a `pre_llm_call` hook classifies once per user message (HostYourAI System One,
+  `hyai/decider-2b`), the result is kept by `turn_id`, and an `llm_request` middleware adds it to every
+  model call of that turn. Both are fail-open. Keyed by `turn_id` because Hermes changes the session id
+  when it compresses. The middleware needs no capability grant; no core change.
+- The time budget is a thread join, because urllib's timeout does not cover DNS or a slow trickle.
+- Only text the user wrote goes out (200 characters of this and the previous user message). Hermes' own
+  `role: user` notes (compaction summary, `display_kind`) are skipped. Tests use invented text only.
+- Pause rules: errors pause 60-75 s; a timeout, low confidence, a short message or no key do not.
+- The prototype and the model benchmarks live in the vault (`wiki/homelab/hyai-auto-prototype/`), not here.
+- Live checks need a warm model: `GET /api/decision/v1/models` shows `state`; a cold model takes about 4
+  minutes and answers 503 meanwhile. Use prompts that cannot make the agent write files.
+
 ## Release/manifest contract
 `hermes-pack.yaml` `version` == the git tag == both `plugin.yaml` versions; both plugin pins are the same full 40-char code commit SHA. `tests/test_manifest_sync.py` checks the relationships.
 

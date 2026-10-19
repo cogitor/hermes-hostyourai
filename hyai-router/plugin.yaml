@@ -8,3 +8,5 @@ author: cogitor
 license: MIT
 homepage: https://github.com/cogitor/hermes-hostyourai
 tags: [slash-command, hostyourai, routing]
+provides_hooks: [pre_llm_call]
+provides_middleware: [llm_request]

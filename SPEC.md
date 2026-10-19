@@ -45,3 +45,50 @@ is "not on hyai/auto".
   reply that is not a JSON object.
 - **U9** The command never raises: a malformed reply cannot make the text fall through to
   the LLM.
+
+## Auto task
+
+`/hyai task auto` asks a small HostYourAI System One model to pick the task for each user
+message, instead of one task for every chat.
+
+How it hooks in (Hermes 0.21.7 and later, no core change): a `pre_llm_call` hook runs once per
+user message (its `user_message` is the original text) and does the classifying. An
+`llm_request` middleware adds the result to each model call of that message, in
+`extra_body`/`extra_headers` only. A failure in either leaves the request unchanged.
+
+- **A1** `/hyai task auto` saves `auto` as the task. Only on hyai/auto (as R7). It is off until the
+  user sets it. `/hyai off` clears it, and so does any other task value.
+- **A2** The hint is added only when the saved task is `auto` and the model is hyai/auto. The
+  policy is sent as usual.
+- **A3** The classifier runs once per user message, in `pre_llm_call`. The result is kept under the
+  turn id (not the session id, which Hermes can change when it compresses) and applied to every
+  model call of that turn. Only the latest few turns are kept.
+- **A4** It sends two texts: the first 200 characters of the user's message and the first 200
+  characters of the user message before it (if any). Never assistant text, tool output or
+  files. Prompts are not written to logs.
+- **A5** The request goes to the HostYourAI System One address with the same key as the router,
+  never anywhere else. Redirects are not followed. The answer body is capped.
+- **A6** The question is a Choice over the eight task values. The task is used only if the chosen
+  value is valid and its confidence is at least `hyai_auto.threshold` (default 0.8).
+- **A7** Anything else means task `chat`: any failure (see A13), a missing key, a confidence below
+  the threshold. No retry. On a Hermes without middleware support `/hyai` still works and auto is
+  not registered.
+- **A8** The time budget is `hyai_auto.timeout_ms` (default 1000) for the whole call, including steps the socket timeout does not cover (name lookup, a slow trickle).
+- **A9** The model is `hyai_auto.model` (default `hyai/decider-2b`). Defaults are used when a setting
+  is missing or not valid.
+- **A10** `/hyai` and `/hyai status` show `task=auto`, and the last result when there is one
+  (the task picked and whether it was a fallback). Never any prompt text.
+- **A11** These turns are never sent and get no auto hint at all (the saved setting applies as
+  before): any model other than hyai/auto, a subagent turn, a cron turn, and a pinned task
+  (a task other than `auto`).
+- **A12** Too little text is not sent either and gets `chat`: when the current and the previous
+  message, trimmed and cut as in A4, add up to fewer than `hyai_auto.min_chars` (default 20)
+  characters. This includes an empty or whitespace-only message and a non-text message. Only text
+  the user wrote counts as the previous message: not Hermes' own notes in the history (the
+  compaction summary, `display_kind` rows) and not messages made of parts such as images.
+- **A13** After an error of the service (an HTTP error including 429 and 503, a refused or
+  failed connection, an oversized or unreadable answer, a choice or confidence that is not valid)
+  auto sends nothing for 60 seconds, plus a random 0 to 25 percent so several processes do not
+  retry together, and gives `chat`. A timeout does not start the pause: that message gets `chat`
+  and the next one tries again. Low confidence, a too-short message and a missing key do not
+  start the pause either.

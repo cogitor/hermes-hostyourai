@@ -91,6 +91,12 @@ class SharedConfigStore:
         assert key == "hyai_routing"
         self._routing = dict(value) if value else {}
 
+    def register_hook(self, name, callback):
+        pass
+
+    def register_middleware(self, kind, callback):
+        pass
+
     def register_command(self, name, handler, description, args_hint="", argument_mode=None):
         self.handler = handler
 

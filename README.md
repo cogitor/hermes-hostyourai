@@ -66,6 +66,18 @@ Select HostYourAI and the model `hyai/auto`, then:
 Shorthand works too: `/hyai code cost` sets both. Use the exact task and policy
 words, in any order.
 
+`/hyai task auto` lets a small HostYourAI model pick the task for each message
+instead of you. It is off until you turn it on, and any other `/hyai task` value
+turns it off again. `/hyai` shows what the last message got.
+
+- If it is not sure, takes longer than 1 second or is unavailable, the message
+  gets `chat`, so a failure never blocks a reply.
+- Messages shorter than about 20 characters in total are not checked.
+- After the service returns an error, auto waits about a minute before asking
+  again.
+- Settings are in `config.yaml` under `hyai_auto`: `model`, `threshold`,
+  `timeout_ms` (default 1000) and `min_chars`.
+
 `/hyai usage` shows your HostYourAI balance, this month's spend and whether
 auto top-up is on, straight from your account. It answers only in a private
 chat or the local CLI, never in a group, and works on any model.
@@ -85,6 +97,11 @@ nothing was changed.
 - Requests to HostYourAI go to `https://hostyourai.com/api/v1` with your API
   key. With `hyai/auto` they also carry your task and policy. Nothing else is
   sent anywhere. No telemetry.
+- With `/hyai task auto`, each message makes one more request to
+  `https://hostyourai.com/api/decision` with your key. It sends the first 200
+  characters of your message and of your message before it, nothing else: no
+  replies, tool output or files. Those texts are never written to logs, and the
+  request never follows a redirect.
 - `/hyai usage` makes one request that only reads your balance to the same address
   with your key, only when you run it, never in a group chat, and it never
   follows a redirect. The result is kept in memory for a minute, not saved.
@@ -96,6 +113,10 @@ nothing was changed.
 ## Known limits
 
 - A one-off `/model --once` choice is invisible to the plugin.
+- Auto needs a warm model. After an idle period HostYourAI can take a few minutes
+  to start the small model again; until then messages simply get `chat`.
+- Auto can add up to 1 second before the first model call of a message.
+- On Hermes older than 0.21.7, `/hyai` still works but auto does nothing.
 - `/hyai` with no arguments shows its options as text. Telegram buttons would
   need support in Hermes itself.
 - Checking the chat's model relies on a Hermes internal that may change. If it

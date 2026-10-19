@@ -31,6 +31,14 @@ class FakeCtx:
         self._store: dict = {}
         self.handler = None
         self.registered = None
+        self.hooks: dict = {}
+        self.middleware: dict = {}
+
+    def register_hook(self, name, callback):
+        self.hooks[name] = callback
+
+    def register_middleware(self, kind, callback):
+        self.middleware[kind] = callback
 
     def get_config(self, key, default=None):
         return self._store.get(key, default)

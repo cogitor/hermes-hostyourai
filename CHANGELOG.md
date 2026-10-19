@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0
+- `/hyai task auto`: a small HostYourAI model picks the task for each message from the
+  start of it and of the message before it. Opt-in; any other task turns it off.
+- It never delays a reply by more than 1 s and falls back to `chat` on any problem:
+  timeout, low confidence, error, no key. After an error it waits 60-75 s before
+  asking again. It skips other models, subagents, cron and very short messages.
+- Settings under `hyai_auto`: `model`, `threshold`, `timeout_ms`, `min_chars`.
+- SPEC.md rules A1-A13, with a test for each.
+
 ## 0.2.1
 - Fix: the "As of" line in `/hyai usage` was missing on Python 3.10 (timestamps ending in `Z`).
 
