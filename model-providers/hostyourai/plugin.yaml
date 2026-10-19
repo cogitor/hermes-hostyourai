@@ -1,6 +1,6 @@
 name: hostyourai-profile
 kind: model-provider
-version: 0.3.0
+version: 0.3.1
 manifest_version: 2
 requires_hermes: ">=0.21.7"
 description: HostYourAI provider profile (hyai/auto router, task/policy routing hints)
