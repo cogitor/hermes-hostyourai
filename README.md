@@ -9,9 +9,6 @@ A [HostYourAI](https://hostyourai.com) provider plugin for
 HostYourAI as a named model provider, and adds a `/hyai` slash command to
 steer its `hyai/auto` router with task/policy hints.
 
-Not affiliated with or endorsed by Nous Research or HostYourAI — a personal,
-unofficial integration.
-
 This package adds two Hermes plugins:
 
 - **`model-providers/hostyourai`** — a `ProviderProfile` so HostYourAI shows up
@@ -24,6 +21,29 @@ This package adds two Hermes plugins:
 
 The two plugins are coupled only by a shared config key name, not by Python
 imports — either can be installed, updated, or removed independently.
+
+## Why HostYourAI?
+
+### 🇪🇺 EU Sovereign hosting of openweight LLM models
+
+- Enable "EU only" on a key to enforce sovereign routing.
+- This is configured in HostYourAI's key-level setting, then used by this node.
+
+Read more: [EU Inference Router](https://hostyourai.com/en/service/eu-inference-router)
+
+### Automatic model choice with parameter-based optimization
+
+- Use the `hyai/auto` model option to automatically select an available warm model.
+- You can steer optimization with Task + Policy parameters.
+- Parameter details are documented below in [Node parameters](./#node-parameters).
+
+Read more: [HostYourAI docs (auto mode)](https://hostyourai.com/app/docs)
+
+### Bring your own model
+
+- You can run any open model from the model catalog, or host dedicated/own models from HuggingFace.
+
+Read more: [Dedicated GPU instances (bring your own model)](https://hostyourai.com/en/service/dedicated-gpu-instances)
 
 ## Install
 
@@ -180,4 +200,4 @@ shape ever changes in a future Hermes release, rather than crashing requests.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+[MIT](LICENSE).
