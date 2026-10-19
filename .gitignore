@@ -3,3 +3,27 @@ __pycache__/
 *.pyo
 .pytest_cache/
 .DS_Store
+
+# Guardrails: local data and secrets must never be committed
+.env
+.env.*
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.sqlite-*
+*.log
+*.pem
+*.key
+*.zip
+*.bundle
+*.tar
+*.tar.gz
+config.yaml
+auth.json
+sessions/
+backups/
+.venv/
+venv/
+.ruff_cache/
