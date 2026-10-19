@@ -1,7 +1,7 @@
 # hermes-hostyourai
 
 [![CI](https://github.com/cogitor/hermes-hostyourai/actions/workflows/ci.yml/badge.svg)](https://github.com/cogitor/hermes-hostyourai/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-v0.1.9-blue)](https://github.com/cogitor/hermes-hostyourai/tags)
+[![Version](https://img.shields.io/badge/version-v0.1.10-blue)](https://github.com/cogitor/hermes-hostyourai/tags)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 Use [HostYourAI](https://hostyourai.com) from [Hermes Agent](https://github.com/NousResearch/hermes-agent),
