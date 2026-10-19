@@ -104,6 +104,7 @@ class JourneyTestCase(unittest.TestCase):
 
     def setUp(self):
         self.router_mod = _load(_ROUTER_PATH, "hyai_router_journey")
+        self.router_mod._active_model = lambda: ("hostyourai", "hyai/auto")
         self.store = SharedConfigStore()
         self.router_mod.register(self.store)
         self.hyai = self.store.handler  # the /hyai handler, call like self.hyai("task code")

@@ -14,7 +14,7 @@ This package adds two Hermes plugins:
   in Hermes's setup/model picker instead of requiring the generic
   custom-endpoint flow. Default model: `hyai/auto`.
 - **`hyai-router`** — the `/hyai` slash command, for setting sticky
-  `task`/`policy`/`transport` routing hints that get applied to every request
+  `task`/`policy` routing hints that get applied to every request
   sent to `hyai/auto` (mirrors the UX of Hermes's built-in `/fast`/`/reasoning`
   commands).
 
@@ -88,16 +88,6 @@ setting. **This only ever applies to the `hyai/auto` model** — the provider
 profile checks the active model with a strict equality match before adding
 any hint; any other model (a different HostYourAI model, or any other
 provider entirely) gets no `hyai` field added to its request at all.
-
-Transport (request body vs. `X-HYAI-Task`/`X-HYAI-Policy` headers) is **not**
-a per-call choice — it's a one-off setting for people behind a proxy/WAF that
-strips custom headers:
-
-```
-hermes config set plugins.entries.hyai-router.settings.hyai_routing.transport headers
-```
-
-Defaults to `body` if unset.
 
 Task/policy enums mirror HostYourAI's own n8n community node
 (`HostYourAiChatModel`), so a Hermes session and an n8n workflow route the
