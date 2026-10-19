@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.9
+- SECURITY.md, CHANGELOG.md, CI job that validates both plugins against Hermes.
+- Hook installer no longer overwrites an existing pre-commit hook.
+
 ## 0.1.8
 - Provider no longer imports a private Hermes function; it reads its setting
   from the public config API.
