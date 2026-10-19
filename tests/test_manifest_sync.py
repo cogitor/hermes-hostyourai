@@ -23,6 +23,14 @@ def vtuple(v: str) -> tuple[int, ...]:
     return tuple(int(x) for x in v.lstrip("v").split("."))
 
 
+PLUGIN_DIRS = ("hyai-router", "model-providers/hostyourai")
+
+
+def field(text: str, key: str) -> str | None:
+    m = re.search(rf"^{key}:\s*[\"']?([^\"'\n#]+?)[\"']?\s*(?:#.*)?$", text, re.M)
+    return m.group(1) if m else None
+
+
 class ManifestSyncTests(unittest.TestCase):
     def setUp(self):
         self.version, self.refs = parse(MANIFEST.read_text())
@@ -58,5 +66,46 @@ class ManifestSyncTests(unittest.TestCase):
         self.assertEqual(parse(shown), (self.version, self.refs))
 
 
-if __name__ == "__main__":
-    unittest.main()
+class PluginManifestTests(unittest.TestCase):
+    """plugin.yaml is what the catalog reads: it must be truthful (admission rule 14)."""
+
+    def setUp(self):
+        self.version, self.refs = parse(MANIFEST.read_text())
+
+    def test_plugin_versions_match_pack_version(self):
+        for d in PLUGIN_DIRS:
+            with self.subTest(plugin=d):
+                self.assertEqual(field((ROOT / d / "plugin.yaml").read_text(), "version"), self.version)
+
+    def test_pinned_commit_carries_matching_plugin_versions(self):
+        if vtuple(self.version) < (0, 1, 7):
+            self.skipTest("v0.1.6 and earlier were pinned before plugin.yaml carried the version")
+        if git("cat-file", "-t", self.refs[0]) != "commit":
+            self.skipTest("pinned commit not available (shallow clone)")
+        for d in PLUGIN_DIRS:
+            with self.subTest(plugin=d):
+                shown = git("show", f"{self.refs[0]}:{d}/plugin.yaml")
+                self.assertIsNotNone(shown)
+                self.assertEqual(field(shown, "version"), self.version)
+
+    def test_requires_hermes_is_a_semver_floor_not_calver(self):
+        for d in PLUGIN_DIRS:
+            with self.subTest(plugin=d):
+                spec = field((ROOT / d / "plugin.yaml").read_text(), "requires_hermes")
+                self.assertIsNotNone(spec, "requires_hermes must be declared")
+                m = re.fullmatch(r">=(\d+)\.(\d+)(?:\.(\d+))?", spec.strip())
+                self.assertIsNotNone(m, f"{spec!r} is not a SemVer floor")
+                self.assertLess(int(m.group(1)), 2000, "CalVer date is not allowed")
+
+    def test_manifest_v2_identity_fields(self):
+        for d in PLUGIN_DIRS:
+            text = (ROOT / d / "plugin.yaml").read_text()
+            with self.subTest(plugin=d):
+                self.assertEqual(field(text, "manifest_version"), "2")
+                self.assertEqual(field(text, "license"), "MIT")
+                self.assertEqual(field(text, "author"), "cogitor")
+                self.assertTrue(field(text, "homepage").startswith("https://github.com/cogitor/"))
+
+    def test_provider_declares_its_api_key(self):
+        text = (ROOT / "model-providers/hostyourai/plugin.yaml").read_text()
+        self.assertIn("HOSTYOURAI_API_KEY", text)

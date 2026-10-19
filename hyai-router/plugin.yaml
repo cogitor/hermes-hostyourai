@@ -1,5 +1,10 @@
 name: hyai-router
 kind: standalone
-version: 0.1.0
-description: /hyai slash command for HostYourAI task/policy routing hints
-author: Emil
+version: 0.1.6
+manifest_version: 2
+requires_hermes: ">=0.21.7"
+description: /hyai slash command for HostYourAI (hyai/auto) task and policy routing hints
+author: cogitor
+license: MIT
+homepage: https://github.com/cogitor/hermes-hostyourai
+tags: [slash-command, hostyourai, routing]

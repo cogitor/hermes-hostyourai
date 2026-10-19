@@ -1,5 +1,15 @@
 name: hostyourai-profile
 kind: model-provider
-version: 0.1.0
+version: 0.1.6
+manifest_version: 2
+requires_hermes: ">=0.21.7"
 description: HostYourAI provider profile (hyai/auto router, task/policy routing hints)
-author: Emil
+author: cogitor
+license: MIT
+homepage: https://github.com/cogitor/hermes-hostyourai
+tags: [model-provider, hostyourai, routing]
+requires_env:
+  - name: HOSTYOURAI_API_KEY
+    description: "HostYourAI API key"
+    url: "https://hostyourai.com"
+    secret: true
