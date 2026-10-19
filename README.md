@@ -107,6 +107,7 @@ Typing `/hyai` by hand works either way.
 - [AGENTS.md](AGENTS.md): how the repo is built, tested and released.
 - [CHANGELOG.md](CHANGELOG.md): what changed in each version.
 - [SECURITY.md](SECURITY.md): how to report a vulnerability.
+- Found a bug? [Open an issue](https://github.com/cogitor/hermes-hostyourai/issues/new/choose) and fill in the template.
 
 ## License and affiliation
 

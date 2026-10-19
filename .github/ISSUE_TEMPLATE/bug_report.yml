@@ -1,0 +1,111 @@
+name: Bug report
+description: Report a bug in the HostYourAI provider profile or the /hyai command
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting this.
+        Please include enough detail to reproduce it, and **remove API keys,
+        chat IDs, phone numbers and personal paths** from anything you paste.
+        To report a security problem, use the private form linked under
+        "Contact links" instead of this template.
+
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      description: One-line description of the bug
+      placeholder: /hyai task code says it is saved, but requests are not steered
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Which part?
+      options:
+        - /hyai command (hyai-router)
+        - Provider profile (hostyourai)
+        - Install or update
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Exact commands or messages, in order
+      placeholder: |
+        1. /model hyai/auto
+        2. /hyai task code
+        3. Send a message
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      placeholder: The reply says X, or the request fails with an error
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or error text
+      description: Relevant lines from `hermes logs` (redact secrets first)
+      render: shell
+
+  - type: input
+    id: plugin_version
+    attributes:
+      label: Plugin version
+      description: Release tag you installed, or the version in plugin.yaml
+      placeholder: 0.1.9
+    validations:
+      required: true
+
+  - type: input
+    id: hermes_version
+    attributes:
+      label: Hermes version
+      description: Output of `hermes --version`
+      placeholder: v0.22.2
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Where did you use it?
+      options:
+        - Telegram
+        - Signal
+        - Other messaging platform
+        - CLI
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: Ubuntu 24.04
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional context
+      description: Screenshots, workarounds, what you already tried
