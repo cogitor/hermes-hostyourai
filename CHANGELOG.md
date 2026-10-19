@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.1
 - Fix: `/hyai usage` now works in the local CLI and Hermes dashboard while
   retaining its private-chat protection for messaging platforms.
 - Fix: routing hints (`/hyai task`/`policy`) no longer show as inapplicable for a
