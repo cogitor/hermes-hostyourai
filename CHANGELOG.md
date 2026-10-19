@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0
+- `/hyai usage`: balance, this month's spend and auto top-up from your HostYourAI
+  account, with a low-balance note below `usage_warn_eur` (default 5).
+- Answers only in a private chat or the local CLI and makes no request
+  otherwise. The key goes only to `hostyourai.com`; redirects are refused.
+- Shorthand: `/hyai code cost` (task and policy in any order).
+- `/hyai` and `/hyai status` now work on any model and show your saved setting;
+  only changing it still needs `hyai/auto`.
+- SPEC.md describes the exact behaviour, with a test for every rule.
+
 ## 0.1.10
 - README: affiliation note restored, Development and License sections, install steps.
 - Bug report issue template; private vulnerability reporting enabled.

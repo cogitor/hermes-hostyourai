@@ -25,6 +25,7 @@ Standalone, unofficial Hermes Agent plugin pack (NOT upstream): a `hostyourai` p
 - Git author for every commit and tag: `Emil Varga <emil.varga@gmail.com>` (GitHub `cogitor`). `release.sh` refuses any other identity. Never rewrite published history without being asked. <!-- scan: allow -->
 
 ## Testing rules
+- `SPEC.md` defines the `/hyai` behaviour as numbered rules (R*, U*). Change behaviour: edit the spec first, then add a `test_<ID>_...` in `tests/test_spec_coverage.py`; a meta-test fails if a rule has no test.
 - Test behavior and relationships, not frozen values (no change-detector tests). Exercise the real SQL/JSON path against a temp db, not lambdas that replace it.
 - Mock Hermes with `sys.modules` fakes (see `tests/test_hostyourai_provider.py`, `tests/test_hyai_user_journeys.py`); no real Hermes install is needed.
 - Any change to the gate, provider hooks or release tooling needs an independent review pass before pushing, and a full gate run.

@@ -63,20 +63,31 @@ Select HostYourAI and the model `hyai/auto`, then:
 /hyai off              clear the hint and let hyai/auto decide alone
 ```
 
+Shorthand works too: `/hyai code cost` sets both. Use the exact task and policy
+words, in any order.
+
+`/hyai usage` shows your HostYourAI balance, this month's spend and whether
+auto top-up is on, straight from your account. It answers only in a private
+chat or the local CLI, never in a group, and works on any model.
+
 The setting sticks until you change it, and it is shared: it applies to every
 chat on the same Hermes profile, and anyone who can use `/hyai` there can
 change it. It only applies to `hyai/auto`:
 any other model or provider never receives it. Switch models with `/model`
 and the hint stops; switch back and it resumes.
 
-If `/hyai` replies "only applies to hostyourai hyai/auto", the chat is on a
-different model; nothing was changed.
+`/hyai` and `/hyai usage` work on any model. If changing the task or policy
+replies "only apply to hostyourai hyai/auto", the chat is on a different model;
+nothing was changed.
 
 ## What it sends and changes
 
 - Requests to HostYourAI go to `https://hostyourai.com/api/v1` with your API
   key. With `hyai/auto` they also carry your task and policy. Nothing else is
   sent anywhere. No telemetry.
+- `/hyai usage` makes one request that only reads your balance to the same address
+  with your key, only when you run it, never in a group chat, and it never
+  follows a redirect. The result is kept in memory for a minute, not saved.
 - `/hyai` saves your choice in your Hermes `config.yaml`.
 - To check which model a chat is using, it reads Hermes's session database in
   read-only mode. If that fails, it does nothing rather than guess.

@@ -63,17 +63,24 @@ class HyaiCommandTestCase(unittest.TestCase):
             ("", ""),
         ):
             self.model = model
-            for args in ("", "status", "task code", "policy cost", "off"):
-                out = self.call(args)
-                self.assertIn("only applies to hostyourai hyai/auto", out)
+            for args in ("task code", "policy cost", "off", "code cost"):
+                self.assertIn("only apply to hostyourai hyai/auto", self.call(args))
             self.assertEqual(self.ctx.get_config(self.mod.CONFIG_KEY, {}), {})
+
+    def test_status_is_readable_on_other_models_with_a_note(self):
+        self.ctx.set_config(self.mod.CONFIG_KEY, {"task": "code"})
+        self.model = ("mistral", "mistral-small-latest")
+        for args in ("", "status"):
+            out = self.call(args)
+            self.assertIn("task=code", out)
+            self.assertIn("only apply to hostyourai hyai/auto", out)
 
     def test_session_selection_wins_over_config_default(self):
         mod = _load_module()
         mod._session_route = lambda: ("mistral", "mistral-small-latest")
         mod._config_route = lambda: ("hostyourai", "hyai/auto")
         self.assertEqual(mod._active_model(), ("mistral", "mistral-small-latest"))
-        self.assertIn("only applies", mod._not_applicable())
+        self.assertIn("only apply", mod._not_applicable())
 
     def test_session_model_without_provider_does_not_borrow_config_provider(self):
         mod = _load_module()
