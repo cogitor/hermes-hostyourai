@@ -11,4 +11,10 @@ echo "check: ruff check";         $RUFF check .
 echo "check: ruff format";        $RUFF format --check .
 echo "check: secret scan";        python3 scripts/scan_secrets.py
 echo "check: tests";              python3 -m unittest discover -s tests
+if command -v hermes >/dev/null 2>&1; then
+  echo "check: hermes plugins validate"
+  for d in hyai-router model-providers/hostyourai; do hermes plugins validate "$d" --install-deps >/dev/null || { echo "check: hermes validate failed for $d" >&2; exit 1; }; done
+else
+  echo "check: hermes not installed, skipping plugin validation (CI)"
+fi
 echo "check: OK"

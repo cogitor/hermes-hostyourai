@@ -45,6 +45,28 @@ Read more: [HostYourAI docs (auto mode)](https://hostyourai.com/app/docs)
 
 Read more: [Dedicated GPU instances (bring your own model)](https://hostyourai.com/en/service/dedicated-gpu-instances)
 
+## Requirements
+
+- Hermes Agent `>=0.21.7` (`requires_hermes` in both manifests; the `/hyai`
+  command uses `argument_mode`, first shipped there).
+- A HostYourAI account and API key (`HOSTYOURAI_API_KEY`).
+- No Python dependencies.
+
+## What leaves your machine, and what the plugin touches
+
+- **Network:** requests to the `hostyourai` provider go to
+  `https://hostyourai.com/api/v1`, with your API key and, when `hyai/auto` is
+  the active model, per-request `task`/`policy` routing hints. Nothing is
+  sent for any other provider or model. No telemetry, no other endpoints.
+- **Credentials:** the key is read only through the provider profile's
+  `HOSTYOURAI_API_KEY` env var; the plugin never reads, logs or stores it.
+- **Files:** `/hyai` writes the chosen `task`/`policy` to this plugin's
+  settings entry in `config.yaml`. It reads Hermes's `state.db`
+  (`gateway_routing`) **read-only** to see which model a gateway session
+  selected with `/model`, and fails closed (no hints) if that cannot be read.
+- **Not done:** no system-prompt changes, no core patching, no self-updating,
+  no background processes.
+
 ## Install
 
 Hermes Agent plugin docs: [Plugins user guide](https://hermes-agent.nousresearch.com/docs/user-guide/features/plugins) ·
@@ -188,9 +210,19 @@ The hook runs `ruff check .` and `ruff format --check .` on commit; it
 installs `ruff` for you on first run if it's not already present. Fix with
 `ruff check --fix .` / `ruff format .` as needed.
 
+## Known limits
+
+- `/model --once` is not visible to the plugin: it cannot read a per-turn
+  override, so hints follow the session's selected model.
+- Bare `/hyai` shows status and choices as text; Telegram buttons would need
+  a core dialog API.
+- Reading the session's selected model relies on `state.db`'s
+  `gateway_routing` table, a private Hermes schema. A public API (a
+  hook passing provider and model to command handlers) is the proper fix.
+
 ## Compatibility
 
-Developed and tested against a specific Hermes Agent checkout as of 2026-10;
+Developed against Hermes Agent 2026.9.24 and declared `>=0.21.7`;
 `model-providers/hostyourai/__init__.py` reads Hermes's internal
 `hermes_cli.plugins_state._plugin_settings_entry` (an underscore-prefixed,
 non-public helper) to resolve the persisted routing state. That's an explicit
