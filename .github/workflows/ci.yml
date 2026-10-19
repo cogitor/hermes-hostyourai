@@ -44,8 +44,11 @@ jobs:
           python-version: "3.12"
 
       - name: Install Hermes
-        # PyPI's hermes-agent is old and has no `plugins validate`; install from source.
-        run: pip install "git+https://github.com/NousResearch/hermes-agent@v0.22.2"
+        # Hermes cannot be pip-installed as a wheel (and PyPI's copy is old):
+        # clone the release tag and install it editable.
+        run: |
+          git clone --depth 1 --branch v0.22.2 https://github.com/NousResearch/hermes-agent "$RUNNER_TEMP/hermes"
+          pip install -e "$RUNNER_TEMP/hermes"
 
       - name: Validate both plugins
         run: |
