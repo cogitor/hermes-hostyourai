@@ -47,4 +47,10 @@ if [ "$PUSH" = 1 ]; then
   [ "$(git ls-remote origin "refs/tags/v$VER^{}" | cut -f1)" = "$(git rev-parse "v$VER^{commit}")" ] \
     || { echo "release: remote tag does not match local" >&2; exit 1; }
 fi
+if [ "$PUSH" = 1 ] && command -v gh >/dev/null 2>&1; then
+  # Notes = this version's CHANGELOG section. A failure here must not undo a pushed release.
+  NOTES="$(awk -v v="## $VER" '$0==v{f=1;next} /^## /{f=0} f' CHANGELOG.md)"
+  gh release create "v$VER" --verify-tag --title "v$VER" --notes "${NOTES:-Release v$VER}" --latest \
+    || echo "release: WARNING GitHub release not created; run: gh release create v$VER --verify-tag" >&2
+fi
 echo "release: v$VER pinned to ${SHA:0:7}$([ "$PUSH" = 1 ] && echo ', pushed and verified')"

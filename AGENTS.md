@@ -42,5 +42,5 @@ Standalone, unofficial Hermes Agent plugin pack (NOT upstream): a `hostyourai` p
 
 ## CI and release notes
 - The `validate` CI job clones Hermes at a pinned tag and installs it editable on Python 3.14. Hermes refuses wheel builds and PyPI's copy is old, so `pip install hermes-agent` does not work.
-- Add a line to `CHANGELOG.md` before every `scripts/release.sh`. Never commit `*.whl` or other build output (the secret scan rejects binaries).
+- Add a section to `CHANGELOG.md` before every `scripts/release.sh`; the script publishes the GitHub Release from it (`gh release create --verify-tag`). Never commit `*.whl` or other build output (the secret scan rejects binaries).
 - Dependabot PRs: verify the new action SHA against the upstream tag with `git ls-remote` before merging.
