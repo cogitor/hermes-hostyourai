@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Installs the repo's git hooks (currently: pre-commit ruff lint/format check).
+# Installs the repo's git hooks (currently: pre-commit: the shared gate, scripts/check.sh).
 # Run once after cloning: ./scripts/install-git-hooks.sh
 set -euo pipefail
 
