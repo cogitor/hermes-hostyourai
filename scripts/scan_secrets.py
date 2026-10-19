@@ -13,14 +13,24 @@ from pathlib import Path
 
 PATTERNS = {
     "api-key-like token": re.compile(r"\b(?:sk|pk|ghp|gho|ghs|xox[bap]|AKIA)[-_A-Za-z0-9]{16,}"),
-    "bearer token": re.compile(r"Bearer\s+[A-Za-z0-9._-]{20,}"),
+    "bearer token": re.compile(r"Bearer\s+[A-Za-z0-9._~+/-]{12,}"),
     "key assignment": re.compile(
-        r"(?i)\b(?:api[_-]?key|secret|token|passw(?:or)?d)\b\s*[=:]\s*['\"][^'\"\s]{12,}['\"]"
+        r"(?i)(?:api[_-]?key|secret|token|passw(?:or)?d)[\"']?\s*[=:]\s*[\"']?[A-Za-z0-9+/_.~-]{12,}"
+    ),
+    # A prefixed name (X_KEY) only counts when the value looks random: digits plus letters.
+    "prefixed key assignment": re.compile(
+        r"(?i)\w+_key[\"']?\s*[=:]\s*[\"']?(?=[A-Za-z0-9+/_.~-]*\d)(?=[A-Za-z0-9+/_.~-]*[A-Za-z])[A-Za-z0-9+/_.~-]{16,}"
     ),
     "private key block": re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
-    "home directory path": re.compile(r"/(?:home|Users)/(?!<|\$|user\b|runner\b|name\b)[a-z][a-z0-9_-]+/"),
+    "home directory path": re.compile(
+        r"(?i:/(?:home|Users)/(?!<|\$|user\b|runner\b|name\b)[a-z][a-z0-9_-]+/|/root/)"
+    ),
     "email address": re.compile(r"\b[\w.+-]+@(?!example\.|users\.noreply\.github\.com)[\w-]+\.[a-z]{2,}\b"),
-    "phone number": re.compile(r"(?<!\d)\+\d{9,15}\b"),
+    "phone number": re.compile(r"(?<!\d)\+\d{1,3}(?:[ .-]?\d){8,13}(?!\d)"),
+    "tailnet hostname": re.compile(r"\b[\w-]+(?:\.[\w-]+)*\.ts\.net\b"),
+    "private ip address": re.compile(
+        r"\b(?:10\.\d{1,3}|192\.168|172\.(?:1[6-9]|2\d|3[01])|100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7]))\.\d{1,3}\.\d{1,3}\b"
+    ),
     "telegram-style chat id": re.compile(r"\b(?:chat_?id|user_?id)\b\D{0,6}\d{7,}"),
 }
 SKIP_SUFFIXES = (".lock",)

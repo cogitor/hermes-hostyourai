@@ -28,16 +28,18 @@ git add hyai-router/plugin.yaml model-providers/hostyourai/plugin.yaml README.md
 # --no-verify: the pack still names the old version here, so the version-sync tests cannot pass yet.
 # The full gate runs on the pin commit below, when everything is consistent.
 git commit -q --no-verify -m "release: v$VER"
-BASE="$(git rev-parse HEAD~1)"
+PRE_RELEASE_HEAD="$(git rev-parse HEAD~1)"; BASE="$PRE_RELEASE_HEAD"
 SHA="$(git rev-parse HEAD)"
+# Every rollback below resets to BASE, the commit this release started from.
+rollback() { [ "$(git rev-parse --verify -q "$BASE")" = "$BASE" ] && git reset -q --hard "$BASE"; }
 
 # 2) Pack manifest: pin both plugins to the release commit.
 sed -i -E "s/^version: .*/version: $VER/; s/^( *ref: ).*/\\1$SHA/" hermes-pack.yaml
 grep -q "^version: $VER$" hermes-pack.yaml && [ "$(grep -c "ref: $SHA" hermes-pack.yaml)" -ge 2 ] \
-  || { echo "release: manifest rewrite did not apply (unexpected format?)" >&2; git reset -q --hard "$BASE"; exit 1; }
+  || { echo "release: manifest rewrite did not apply (unexpected format?)" >&2; rollback; exit 1; }
 git add hermes-pack.yaml
-git commit -q -m "hermes-pack: bump to v$VER, pin to ${SHA:0:7}" || { git reset -q --hard "$BASE"; echo "release: gate failed on pin commit, release rolled back" >&2; exit 1; }
-scripts/check.sh || { git reset -q --hard "$BASE"; echo "release: gate failed on the pinned release, rolled back" >&2; exit 1; }
+git commit -q -m "hermes-pack: bump to v$VER, pin to ${SHA:0:7}" || { rollback; echo "release: gate failed on pin commit, release rolled back" >&2; exit 1; }
+scripts/check.sh || { rollback; echo "release: gate failed on the pinned release, rolled back" >&2; exit 1; }
 git tag -a "v$VER" -m "v$VER"
 if [ "$PUSH" = 1 ]; then
   git push --atomic origin main "v$VER" \

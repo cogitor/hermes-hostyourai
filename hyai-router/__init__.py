@@ -63,6 +63,7 @@ def _format_status(state: dict) -> str:
         return "HostYourAI routing: not set (hyai/auto decides per request)"
     return (
         f"HostYourAI routing: task={state.get('task') or '(unset)'} policy={state.get('policy') or '(unset)'}"
+        " (applies to every chat on this Hermes profile)"
     )
 
 

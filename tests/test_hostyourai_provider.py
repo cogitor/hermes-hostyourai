@@ -1,6 +1,6 @@
 """Unit tests for model-providers/hostyourai/__init__.py's provider-profile hooks.
 
-Mocks ``hermes_cli.plugins_state`` / ``hermes_cli.config`` (the two modules the
+Mocks ``hermes_cli.config`` (the module the
 plugin under test imports lazily inside ``_read_routing_state_unsafe``) so this
 runs with zero real Hermes install. Covers the full build_extra_body /
 build_api_kwargs_extras matrix plus the fail-open contract around malformed
@@ -40,21 +40,13 @@ def _install_fake_hermes_modules(settings_entry):
     hermes_cli_pkg = types.ModuleType("hermes_cli")
     sys.modules["hermes_cli"] = hermes_cli_pkg
 
-    plugins_state_mod = types.ModuleType("hermes_cli.plugins_state")
-
-    def _plugin_settings_entry(_config, _plugin_id):
-        return settings_entry()
-
-    plugins_state_mod._plugin_settings_entry = _plugin_settings_entry
-    sys.modules["hermes_cli.plugins_state"] = plugins_state_mod
-
     config_mod = types.ModuleType("hermes_cli.config")
-    config_mod.load_config_readonly = lambda: {}
+    config_mod.load_config_readonly = lambda: {"plugins": {"entries": {"hyai-router": settings_entry()}}}
     sys.modules["hermes_cli.config"] = config_mod
 
 
 def _load_module(settings_entry):
-    """Load the plugin fresh with the given fake ``_plugin_settings_entry`` return value
+    """Load the plugin fresh with the given fake settings entry
     (a zero-arg callable so each test can vary/raise)."""
     _install_fake_hermes_modules(settings_entry)
     mod_name = "hostyourai_under_test"
@@ -165,7 +157,7 @@ class ReadRoutingStateFailOpenTestCase(unittest.TestCase):
         mod = _load_module(lambda: {"settings": {"hyai_routing": "not-a-dict"}})
         self.assertEqual(mod._read_routing_state(), {})
 
-    def test_plugin_settings_entry_raises_returns_empty_and_does_not_propagate(self):
+    def test_config_read_raises_returns_empty_and_does_not_propagate(self):
         def _raiser():
             raise RuntimeError("boom")
 
@@ -177,7 +169,7 @@ class ReadRoutingStateFailOpenTestCase(unittest.TestCase):
         mod = _load_module(lambda: _entry({"task": "code"}))
         with mock.patch.dict(
             sys.modules,
-            {"hermes_cli.plugins_state": None, "hermes_cli.config": None},
+            {"hermes_cli.config": None},
         ):
             self.assertEqual(mod._read_routing_state(), {})
 

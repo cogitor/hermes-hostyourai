@@ -30,6 +30,14 @@ class ScanTests(unittest.TestCase):
             "email": "me@" + "corp.io",
             "phone": "+" + "491701234567",
             "chat": "chat_id: " + "12345678",
+            "prefixed key": 'X_KEY="' + "abcdefghijklmnop1234" + '"',
+            "unquoted token": "TOKEN: " + "abcdefghijkl1234",
+            "root path": "/root/" + "notes.txt",  # scan: allow
+            "mixed-case home": "/home/" + "Bob/x",
+            "spaced phone": "+49 170 " + "1234567",
+            "tailnet": "box." + "tail1234.ts.net",  # scan: allow
+            "private ip": "10.0." + "3.7",
+            "short bearer": "Bearer " + "abcdefgh1234",
         }
         for name, line in samples.items():
             with self.subTest(name):
@@ -38,6 +46,7 @@ class ScanTests(unittest.TestCase):
     def test_clean_and_allowed_lines_pass(self):
         self.assertEqual(self._scan("x = 1\npath = '/home/<user>/.hermes'\nuser@example.com\n"), [])
         self.assertEqual(self._scan("/home/" + "someone/x  # scan: allow"), [])
+        self.assertEqual(self._scan('version: 0.1.7\nkey = value\nrequires_hermes: ">=0.21.7"\n'), [])
 
     def test_repo_itself_is_clean(self):
         files = scan_secrets.tracked_files()

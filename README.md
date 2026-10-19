@@ -61,7 +61,9 @@ Select HostYourAI and the model `hyai/auto`, then:
 /hyai off              clear the hint and let hyai/auto decide alone
 ```
 
-The setting sticks until you change it. It only applies to `hyai/auto`:
+The setting sticks until you change it, and it is shared: it applies to every
+chat on the same Hermes profile, and anyone who can use `/hyai` there can
+change it. It only applies to `hyai/auto`:
 any other model or provider never receives it. Switch models with `/model`
 and the hint stops; switch back and it resumes.
 

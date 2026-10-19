@@ -129,6 +129,9 @@ class HyaiCommandTestCase(unittest.TestCase):
         self.assertIn("task=code", out)
         self.assertIn("policy=speed", out)
 
+    def test_set_reply_says_the_setting_is_profile_wide(self):
+        self.assertIn("every chat", self.call("task code"))
+
     # --- task ---------------------------------------------------------
     def test_task_valid_persists_and_is_lowercased(self):
         self.call("task CODE")

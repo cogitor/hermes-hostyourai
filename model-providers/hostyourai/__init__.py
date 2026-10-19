@@ -70,9 +70,12 @@ def _read_routing_state() -> dict[str, Any]:
 def _read_routing_state_unsafe() -> dict[str, Any]:
     """Unguarded body of :func:`_read_routing_state` — never call directly outside a test."""
     from hermes_cli.config import load_config_readonly
-    from hermes_cli.plugins_state import _plugin_settings_entry
 
-    entry = _plugin_settings_entry(load_config_readonly() or {}, _ROUTER_PLUGIN_ID)
+    # Public config only: plugins.entries.<id>.settings.<key>, each level checked.
+    node: Any = load_config_readonly() or {}
+    for key in ("plugins", "entries", _ROUTER_PLUGIN_ID):
+        node = node.get(key) if isinstance(node, dict) else None
+    entry = node
     if not isinstance(entry, dict):
         return {}
     settings = entry.get("settings")

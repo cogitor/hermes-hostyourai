@@ -55,17 +55,13 @@ def _install_fake_hermes_modules(get_routing_state):
     hermes_cli_pkg = types.ModuleType("hermes_cli")
     sys.modules["hermes_cli"] = hermes_cli_pkg
 
-    plugins_state_mod = types.ModuleType("hermes_cli.plugins_state")
-
-    def _plugin_settings_entry(_config, _plugin_id):
+    def _config():
         state = get_routing_state()
-        return {"settings": {"hyai_routing": state}} if state is not None else {}
-
-    plugins_state_mod._plugin_settings_entry = _plugin_settings_entry
-    sys.modules["hermes_cli.plugins_state"] = plugins_state_mod
+        entry = {"settings": {"hyai_routing": state}} if state is not None else {}
+        return {"plugins": {"entries": {"hyai-router": entry}}}
 
     config_mod = types.ModuleType("hermes_cli.config")
-    config_mod.load_config_readonly = lambda: {}
+    config_mod.load_config_readonly = _config
     sys.modules["hermes_cli.config"] = config_mod
 
 
