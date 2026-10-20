@@ -1,13 +1,13 @@
 name: hyai-pack
 description: HostYourAI provider profile + /hyai task/policy routing command for Hermes Agent
 author: cogitor
-version: 0.3.1
+version: 0.3.2
 
 plugins:
   - repo: cogitor/hermes-hostyourai
-    ref: 9b468bf0eb7953bce89f7961862e8edd080ae42a
+    ref: 16b1168422f71e79db20f38192d893eba7246df5
     subdir: hyai-router
 
   - repo: cogitor/hermes-hostyourai
-    ref: 9b468bf0eb7953bce89f7961862e8edd080ae42a
+    ref: 16b1168422f71e79db20f38192d893eba7246df5
     subdir: model-providers/hostyourai
