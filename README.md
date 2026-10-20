@@ -66,17 +66,8 @@ Select HostYourAI and the model `hyai/auto`, then:
 Shorthand works too: `/hyai code cost` sets both. Use the exact task and policy
 words, in any order.
 
-`/hyai task auto` lets a small HostYourAI model pick the task for each message
-instead of you. It is off until you turn it on, and any other `/hyai task` value
-turns it off again. `/hyai` shows what the last message got.
-
-- If it is not sure, takes longer than 1 second or is unavailable, the message
-  gets `chat`, so a failure never blocks a reply.
-- Messages shorter than about 20 characters in total are not checked.
-- After the service returns an error, auto waits about a minute before asking
-  again.
-- Settings are in `config.yaml` under `hyai_auto`: `model`, `threshold`,
-  `timeout_ms` (default 1000) and `min_chars`.
+> **Experimental:** `/hyai task auto` lets a small HostYourAI model pick the task
+> for you. It is off until you enable it. See [Experimental](#experimental).
 
 `/hyai usage` shows your HostYourAI balance, this month's spend and whether
 auto top-up is on, straight from your account. It answers only in a private
@@ -92,6 +83,26 @@ and the hint stops; switch back and it resumes.
 `/hyai` and `/hyai usage` work on any model. If changing the task or policy
 replies "only apply to hostyourai hyai/auto", the chat is on a different model;
 nothing was changed.
+
+### Experimental
+
+> ⚠️ **This is an experiment, treat it as such.** It uses a small
+> decision model (`hyai/decider-2b` by default) to guess what you are doing,
+> and that guess is not always right. Treat it as a taste of what automatic
+> model selection with decision models could be — not as something to rely on.
+> It may change or disappear in a later version.
+
+`/hyai task auto` lets the small model pick the task for each message instead of
+you. It is off until you turn it on, and any other `/hyai task` value turns it
+off again. `/hyai` shows what the last message got.
+
+- If it is not sure, takes longer than 1 second or is unavailable, the message
+  gets `chat`, so a failure never blocks a reply.
+- Messages shorter than about 20 characters in total are not checked.
+- After the service returns an error, auto waits about a minute before asking
+  again.
+- Settings are in `config.yaml` under `hyai_auto`: `model`, `threshold`,
+  `timeout_ms` (default 1000) and `min_chars`.
 
 ## What it sends and changes
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.2
+- Docs: `/hyai task auto` is flagged **Experimental** in the README (own
+  subsection with a gentle "treat it as an experiment" note) and in the
+  0.3.0 changelog entry, so readers know it is a prototype shaped by a
+  HostYourAI decision model, not something to rely on.
+
 ## 0.3.1
 - Fix: `/hyai usage` now works in the local CLI and Hermes dashboard while
   retaining its private-chat protection for messaging platforms.
@@ -8,8 +14,11 @@
   used instead.
 
 ## 0.3.0
-- `/hyai task auto`: a small HostYourAI model picks the task for each message from the
-  start of it and of the message before it. Opt-in; any other task turns it off.
+- **Experimental** `/hyai task auto`: a small HostYourAI decision model
+  (`hyai/decider-2b` by default) picks the task for each message from the
+  start of it and of the message before it. Treat it as an experiment: the
+  guess is sometimes wrong, and the behaviour may change or disappear.
+  Opt-in; any other task turns it off.
 - It never delays a reply by more than 1 s and falls back to `chat` on any problem:
   timeout, low confidence, error, no key. After an error it waits 60-75 s before
   asking again. It skips other models, subagents, cron and very short messages.
