@@ -1,5 +1,7 @@
 # hermes-hostyourai
 
+![HostYourAI for Hermes Agent — EU-hosted inference](docs/banner.jpg)
+
 [![CI](https://github.com/cogitor/hermes-hostyourai/actions/workflows/ci.yml/badge.svg)](https://github.com/cogitor/hermes-hostyourai/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/badge/version-v0.4.0-blue)](https://github.com/cogitor/hermes-hostyourai/tags)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
