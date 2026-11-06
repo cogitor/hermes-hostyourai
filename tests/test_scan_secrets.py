@@ -60,6 +60,21 @@ class ScanTests(unittest.TestCase):
         self.assertTrue(files)
         self.assertEqual([h for f in files for h in scan_secrets.scan(f)], [])
 
+    def test_binary_non_image_file_is_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = os.path.join(d, "build.whl")
+            Path(p).write_bytes(bytes(range(256)))
+            hits = scan_secrets.scan(p)
+            self.assertEqual(len(hits), 1)
+            self.assertIn("binary (non-UTF-8) file is tracked", hits[0])
+
+    def test_binary_image_file_is_allowed(self):
+        with tempfile.TemporaryDirectory() as d:
+            for ext in (".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico", ".PNG"):
+                p = os.path.join(d, f"banner{ext}")
+                Path(p).write_bytes(bytes(range(256)))
+                self.assertEqual(scan_secrets.scan(p), [], f"{ext} should be allowed")
+
 
 if __name__ == "__main__":
     unittest.main()

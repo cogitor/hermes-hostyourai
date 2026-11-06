@@ -35,6 +35,10 @@ PATTERNS = {
 }
 MAX_LINE = 2000
 SKIP_SUFFIXES = (".lock",)
+# Known-safe binary formats for documentation assets (e.g. README banners).
+# Still scanned with every other check on all other tracked files; this only
+# exempts these extensions from the "no binaries" rule, not from anything else.
+BINARY_ALLOW_SUFFIXES = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico")
 SELF = "scripts/scan_secrets.py"
 
 
@@ -58,6 +62,8 @@ def scan(path: str) -> list[str]:
     except FileNotFoundError:
         return []  # deleted in the working tree but still in the index
     except UnicodeDecodeError:
+        if path.lower().endswith(BINARY_ALLOW_SUFFIXES):
+            return []
         return [f"{path}: binary (non-UTF-8) file is tracked; this repo should hold text only"]
     hits = []
     for n, line in enumerate(text.splitlines(), 1):
