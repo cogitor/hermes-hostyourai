@@ -44,11 +44,6 @@ hermes plugins install cogitor/hermes-hostyourai/hostyourai --enable
 Then add your key (`hermes config set HOSTYOURAI_API_KEY`) and pick the
 provider with `hermes model`.
 
-> **Upgrading from 0.3.x?** The old two-plugin install (`hyai-router` +
-> `hostyourai-profile`) is replaced by this single `hostyourai` plugin.
-> Uninstall both old plugins before installing the new one:
-> `hermes plugins uninstall hyai-router && hermes plugins uninstall hostyourai-profile`.
-
 ## Use it
 
 Select HostYourAI and the model `hyai/auto`, then:
