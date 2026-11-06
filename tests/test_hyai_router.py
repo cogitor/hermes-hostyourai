@@ -55,12 +55,16 @@ class FakeCtx:
         self.registered = None
         self.hooks: dict = {}
         self.middleware: dict = {}
+        self.skills: dict = {}
 
     def register_hook(self, name, callback):
         self.hooks[name] = callback
 
     def register_middleware(self, kind, callback):
         self.middleware[kind] = callback
+
+    def register_skill(self, name, path):
+        self.skills[name] = path
 
     def get_config(self, key, default=None):
         return self._store.get(key, default)
@@ -206,6 +210,28 @@ class HyaiCommandTestCase(unittest.TestCase):
             profile.build_extra_body(model=self.mod.HYAI_DEFAULT_MODEL),
             {"hyai": {"task": "code", "policy": "speed"}},
         )
+
+    # --- bundled skills are registered via ctx.register_skill, if the host supports it ----
+    def test_bundled_skills_are_registered_with_ctx_when_supported(self):
+        ctx = FakeCtx()
+        self.mod.register(ctx)
+        self.assertIn("hyai-decide", ctx.skills)
+        self.assertTrue(str(ctx.skills["hyai-decide"]).endswith("SKILL.md"))
+        self.assertTrue(ctx.skills["hyai-decide"].is_file())
+
+    def test_skill_registration_is_skipped_gracefully_without_register_skill(self):
+        ctx = OldCtxWithoutRegisterSkill()
+        self.mod.register(ctx)  # must not raise
+        self.assertIsNotNone(ctx.handler)
+
+
+class OldCtxWithoutRegisterSkill(FakeCtx):
+    """A Hermes ctx with no register_skill (older host)."""
+
+    def __getattribute__(self, name):
+        if name == "register_skill":
+            raise AttributeError(name)
+        return super().__getattribute__(name)
 
 
 if __name__ == "__main__":

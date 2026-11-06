@@ -42,6 +42,7 @@ import time
 import urllib.error
 import urllib.request
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from providers import register_provider
@@ -549,6 +550,13 @@ register_provider(hostyourai)
 def register(ctx) -> None:
     global _ctx
     _ctx = ctx
+
+    if hasattr(ctx, "register_skill"):
+        skills_dir = Path(__file__).parent / "skills"
+        for child in sorted(skills_dir.iterdir()) if skills_dir.is_dir() else ():
+            skill_md = child / "SKILL.md"
+            if child.is_dir() and skill_md.exists():
+                ctx.register_skill(child.name, skill_md)
 
     def _handle_hyai(raw_args: str):
         parts = (raw_args or "").split()

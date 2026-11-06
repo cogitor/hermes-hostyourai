@@ -1,0 +1,12 @@
+skill: hyai-decide
+version: 0.1.0
+checks:
+  - id: trigger
+    weight: 40
+  - id: privacy
+    weight: 35
+  - id: correctness
+    weight: 25
+scoring:
+  pass_threshold: 70
+  excellent_threshold: 90

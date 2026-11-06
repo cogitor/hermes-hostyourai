@@ -29,6 +29,9 @@ One plugin, `hostyourai`:
   don't need the generic custom-endpoint setup. Default model: `hyai/auto`.
 - **A `/hyai` command** to give `hyai/auto` a hint about the work, for example
   "this is code, optimise for speed".
+- **A bundled `hyai-decide` skill** for calling HostYourAI's typed decision API
+  (classify/score/route judgments) directly from your own agent tasks, not just
+  through this plugin's `/hyai` command.
 
 ## Requirements
 

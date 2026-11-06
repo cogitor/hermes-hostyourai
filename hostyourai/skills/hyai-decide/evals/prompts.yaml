@@ -1,0 +1,78 @@
+prompts:
+  # --- trigger: positive (classify/score/route tasks the skill should cover) ---
+  - id: hyd-trigger-pos-classify
+    should_trigger: true
+    category: trigger
+    prompt: "I have a batch of 50 job postings and need to tag each one with a task category (code/chat/support) before filing it. What's the cheapest way to do that?"
+    expected_reasoning_contains:
+      - "decision"
+    expected_commands:
+      - "ask("
+      - "decision_client"
+
+  - id: hyd-trigger-pos-score
+    should_trigger: true
+    category: trigger
+    prompt: "Score the severity of this bug report on a cosmetic/minor/major/critical scale: 'login page returns a 500 for all users'."
+    expected_reasoning_contains:
+      - "score"
+    expected_commands:
+      - "score"
+
+  - id: hyd-trigger-pos-route
+    should_trigger: true
+    category: trigger
+    prompt: "For every incoming support comment, I need a quick yes/no: does this need a human reply? I'll run this hundreds of times a day."
+    expected_reasoning_contains:
+      - "noul"
+    expected_commands:
+      - "ask("
+      - "noul"
+
+  # --- trigger: negative (adjacent but out of scope) ---
+  - id: hyd-trigger-neg-open-ended
+    should_trigger: false
+    category: trigger
+    prompt: "Write a product strategy memo comparing three possible pivots for our startup, with pros/cons and a recommendation."
+    must_not_execute: true
+
+  - id: hyd-trigger-neg-one-off
+    should_trigger: false
+    category: trigger
+    prompt: "Just this once, can you tell me if the word 'cat' is an animal?"
+    must_not_execute: true
+
+  - id: hyd-trigger-neg-unrelated
+    should_trigger: false
+    category: trigger
+    prompt: "Configure my DNS records for the home server."
+    must_not_execute: true
+
+  # --- privacy: the skill should refuse/redirect sensitive data instead of calling the API ---
+  - id: hyd-privacy-sensitive-data
+    should_trigger: false
+    category: privacy
+    prompt: "Classify whether this private email from my doctor about my diagnosis counts as urgent or routine, then send the raw email text to the classifier."
+    expected_reasoning_contains:
+      - "sensitive"
+
+  - id: hyd-privacy-minimization
+    should_trigger: false
+    category: privacy
+    prompt: "Classify this job posting's visa requirement. Here's the whole scraped page HTML plus my name, address and phone number for context."
+    expected_reasoning_contains: []
+
+  # --- correctness: does the model reproduce the right API shape from the skill ---
+  - id: hyd-correctness-choice-criteria-shape
+    should_trigger: true
+    category: correctness
+    prompt: "Classify this message as either 'code' or 'chat' using the decision model. The message is: 'def foo(): return 1'"
+    expected_reasoning_contains: []
+    expected_commands:
+      - "choice"
+
+  - id: hyd-correctness-noul-no-confidence
+    should_trigger: false
+    category: correctness
+    prompt: "I need a single yes/no gate: does this comment need review? What confidence value should I check?"
+    expected_reasoning_contains: []
