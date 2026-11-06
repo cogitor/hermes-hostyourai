@@ -16,15 +16,13 @@ git fetch -q origin main --tags
 [ "$(git rev-list --count HEAD..origin/main)" = 0 ] || { echo "release: local main is behind origin/main" >&2; exit 1; }
 
 scripts/check.sh
-# 1) Release commit: plugin manifests + README badge carry the new version. This is the commit
-#    the catalog/pack pins, so its plugin.yaml files must already say X.Y.Z.
-sed -i -E "s/^version: .*/version: $VER/" hyai-router/plugin.yaml model-providers/hostyourai/plugin.yaml
+# 1) Release commit: plugin manifest + README badge carry the new version. This is the commit
+#    the catalog/pack pins, so plugin.yaml must already say X.Y.Z.
+sed -i -E "s/^version: .*/version: $VER/" hostyourai/plugin.yaml
 sed -i -E "s#badge/version-v[0-9.]+-blue#badge/version-v$VER-blue#" README.md
-for f in hyai-router/plugin.yaml model-providers/hostyourai/plugin.yaml; do
-  grep -q "^version: $VER$" "$f" || { echo "release: $f version rewrite did not apply" >&2; git restore --staged --worktree .; exit 1; }
-done
+grep -q "^version: $VER$" hostyourai/plugin.yaml || { echo "release: hostyourai/plugin.yaml version rewrite did not apply" >&2; git restore --staged --worktree .; exit 1; }
 grep -q "badge/version-v$VER-blue" README.md || { echo "release: README version badge missing" >&2; git restore --staged --worktree .; exit 1; }
-git add hyai-router/plugin.yaml model-providers/hostyourai/plugin.yaml README.md
+git add hostyourai/plugin.yaml README.md
 # --no-verify: the pack still names the old version here, so the version-sync tests cannot pass yet.
 # The full gate runs on the pin commit below, when everything is consistent.
 git commit -q --no-verify -m "release: v$VER" || { git restore --staged --worktree .; echo "release: release commit failed" >&2; exit 1; }
@@ -33,9 +31,9 @@ SHA="$(git rev-parse HEAD)"
 # Every rollback below resets to BASE, the commit this release started from.
 rollback() { [ "$(git rev-parse --verify -q "$BASE")" = "$BASE" ] && git reset -q --hard "$BASE" || echo "release: WARNING rollback could not resolve $BASE; check git log" >&2; }
 
-# 2) Pack manifest: pin both plugins to the release commit.
+# 2) Pack manifest: pin the single plugin to the release commit.
 sed -i -E "s/^version: .*/version: $VER/; s/^( *ref: ).*/\\1$SHA/" hermes-pack.yaml
-grep -q "^version: $VER$" hermes-pack.yaml && [ "$(grep -c "ref: $SHA" hermes-pack.yaml)" -ge 2 ] \
+grep -q "^version: $VER$" hermes-pack.yaml && [ "$(grep -c "ref: $SHA" hermes-pack.yaml)" -ge 1 ] \
   || { echo "release: manifest rewrite did not apply (unexpected format?)" >&2; rollback; exit 1; }
 git add hermes-pack.yaml
 git commit -q -m "hermes-pack: bump to v$VER, pin to ${SHA:0:7}" || { rollback; echo "release: gate failed on pin commit, release rolled back" >&2; exit 1; }
