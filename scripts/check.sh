@@ -17,7 +17,7 @@ if command -v uv >/dev/null 2>&1; then
 fi
 if command -v hermes >/dev/null 2>&1; then
   echo "check: hermes plugins validate"
-  for d in hyai-router model-providers/hostyourai; do out="$(hermes plugins validate "$d" --install-deps 2>&1)" || { echo "$out" >&2; echo "check: hermes validate failed for $d" >&2; exit 1; }; done
+  d="hostyourai"; out="$(hermes plugins validate "$d" --install-deps 2>&1)" || { echo "$out" >&2; echo "check: hermes validate failed for $d" >&2; exit 1; }
 else
   echo "check: hermes not installed, skipping plugin validation (CI)"
 fi

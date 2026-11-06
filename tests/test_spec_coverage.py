@@ -95,10 +95,9 @@ class RoutingSpec(unittest.TestCase):
             self.assertNotIn("transport", self.call(args).lower())
 
     def test_R11_saved_setting_is_sent_only_to_hyai_auto(self):
-        from test_hostyourai_provider import _entry
         from test_hostyourai_provider import _load_module as load_provider
 
-        profile = load_provider(lambda: _entry({"task": "code", "policy": "cost"})).hostyourai
+        profile = load_provider({"task": "code", "policy": "cost"}).hostyourai
         self.assertEqual(
             profile.build_extra_body(model="hyai/auto"), {"hyai": {"task": "code", "policy": "cost"}}
         )

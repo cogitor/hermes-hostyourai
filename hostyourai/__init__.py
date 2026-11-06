@@ -1,10 +1,25 @@
-"""``/hyai``: HostYourAI task/policy routing hints for ``hyai/auto``, and account balance.
+"""HostYourAI: provider profile for ``hyai/auto`` plus the ``/hyai`` routing-hint command.
 
-The task/policy choice is saved in this plugin's config (``CONFIG_KEY``). The companion
-``hostyourai`` provider profile reads it on every request, so it applies to every chat on the
-profile. The setting is always accepted regardless of the chat's current model; it has no
-effect unless that chat is actually on ``hyai/auto`` — the provider profile is the real and
-only gate (checked at request time, not here).
+One plugin, two roles that only make sense together: the ``hostyourai`` provider profile
+(``hyai/auto`` router) and the ``/hyai`` slash command that sets a sticky task/policy hint
+for it. Both read/write the same in-process plugin config (``CONFIG_KEY``) via the plugin
+``ctx`` captured at ``register(ctx)`` time — no cross-plugin config-key coupling, because
+there is now only one plugin.
+
+The task/policy choice is saved in this plugin's config (``CONFIG_KEY``). The provider
+profile reads it on every request and applies it via ``build_extra_body``/
+``build_api_kwargs_extras``, which the transport
+(``agent/transports/chat_completions.py::_build_kwargs_from_profile``) always calls for the
+active provider. The setting is always accepted regardless of the chat's current model; it
+has no effect unless that chat is actually on ``hyai/auto`` — the provider profile is the
+real and only gate (checked at request time, not in ``/hyai``).
+
+Wire shape:
+  - transport "body" (default): ``extra_body["hyai"] = {"task": ..., "policy": ...}``
+  - transport "headers": ``X-HYAI-Task`` / ``X-HYAI-Policy`` request headers
+
+Only applied when the active model is exactly ``hyai/auto`` — a pinned concrete model has
+no router to hint.
 
     /hyai                      show current task/policy
     /hyai status               same as above
@@ -27,13 +42,27 @@ import time
 import urllib.error
 import urllib.request
 from datetime import datetime
+from typing import Any
+
+from providers import register_provider
+from providers.base import ProviderProfile
 
 logger = logging.getLogger(__name__)
 
-HYAI_TASKS = ("chat", "code", "summarise", "classify", "extract", "rag", "legal", "reason")
+HYAI_TASKS = (
+    "chat",
+    "code",
+    "summarise",
+    "classify",
+    "extract",
+    "rag",
+    "legal",
+    "reason",
+)
 HYAI_POLICIES = ("balanced", "speed", "cost", "quality")
+HYAI_DEFAULT_MODEL = "hyai/auto"
 
-CONFIG_KEY = "hyai_routing"  # read by the hostyourai provider profile too
+CONFIG_KEY = "hyai_routing"  # shared by the /hyai command and the provider profile below
 _USAGE = (
     "Usage: /hyai [status|task <value>|policy <value>|off|clear|usage]\n"
     f"  task:   {'|'.join(HYAI_TASKS)}|auto\n"
@@ -415,7 +444,112 @@ def _on_llm_request(ctx, *, request=None, turn_id="", model="", **_ignored):
     return {"request": request}
 
 
+# --- provider profile ------------------------------------------------------
+
+# Set by register(ctx) at plugin load. The provider-profile hooks below run on every real
+# request (not via register(ctx)'s own call chain), so they reach the same plugin config
+# through this module-level handle rather than importing/parsing config.yaml directly — now
+# that the command and the provider are the same plugin, there is no cross-plugin coupling
+# left to bridge.
+_ctx: Any = None
+
+
+def _read_routing_state() -> dict[str, Any]:
+    """Read the sticky {task, policy, transport} dict the /hyai command persisted via ``ctx``.
+
+    Fails open (empty dict) on ANY error — a provider-profile hook runs on every real
+    request, so nothing here may ever raise into that hot path.
+    """
+    try:
+        return _read_routing_state_unsafe()
+    except Exception as exc:
+        logger.warning(
+            "hostyourai: routing-state read failed (%s: %s) — no routing hints applied.",
+            type(exc).__name__,
+            exc,
+        )
+        return {}
+
+
+def _read_routing_state_unsafe() -> dict[str, Any]:
+    """Unguarded body of :func:`_read_routing_state` — never call directly outside a test."""
+    if _ctx is None:
+        return {}
+    state = dict(_saved_state(_ctx))
+    # Defense-in-depth: re-validate against the enum even though the /hyai command already
+    # only ever persists valid values — a hand-edited config.yaml, or header-injection via
+    # control characters in task/policy, must never reach the wire unchecked.
+    task, policy = state.get("task"), state.get("policy")
+    if task == "auto":  # set by /hyai: the auto hook adds the real task per message itself
+        state.pop("task")
+    elif task is not None and task not in HYAI_TASKS:
+        logger.warning("hostyourai: ignoring invalid persisted task %r (not in %s)", task, HYAI_TASKS)
+        state.pop("task", None)
+    if policy is not None and policy not in HYAI_POLICIES:
+        logger.warning("hostyourai: ignoring invalid persisted policy %r (not in %s)", policy, HYAI_POLICIES)
+        state.pop("policy", None)
+    return state
+
+
+class HostYourAiProfile(ProviderProfile):
+    """HostYourAI — OpenAI-compatible router with task/policy hints on hyai/auto."""
+
+    def build_extra_body(self, *, session_id: str | None = None, **context: Any) -> dict[str, Any]:
+        if (context.get("model") or "") != HYAI_DEFAULT_MODEL:
+            return {}
+        state = _read_routing_state()
+        if state.get("transport") == "headers":
+            return {}  # headers path is emitted from build_api_kwargs_extras instead
+        task, policy = state.get("task"), state.get("policy")
+        if not task and not policy:
+            return {}
+        hyai: dict[str, str] = {}
+        if task:
+            hyai["task"] = task
+        if policy:
+            hyai["policy"] = policy
+        return {"hyai": hyai}
+
+    def build_api_kwargs_extras(
+        self, *, reasoning_config: dict | None = None, **context: Any
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        if (context.get("model") or "") != HYAI_DEFAULT_MODEL:
+            return {}, {}
+        state = _read_routing_state()
+        if state.get("transport") != "headers":
+            return {}, {}
+        headers: dict[str, str] = {}
+        if state.get("task"):
+            headers["X-HYAI-Task"] = str(state["task"])
+        if state.get("policy"):
+            headers["X-HYAI-Policy"] = str(state["policy"])
+        if not headers:
+            return {}, {}
+        return {}, {"extra_headers": headers}
+
+
+hostyourai = HostYourAiProfile(
+    name="hostyourai",
+    aliases=("hyai",),
+    display_name="HostYourAI",
+    description="HostYourAI — self-hosted inference router (hyai/auto task/policy routing)",
+    signup_url="https://hostyourai.com/app/docs",
+    env_vars=("HOSTYOURAI_API_KEY",),
+    base_url="https://hostyourai.com/api/v1",
+    default_aux_model=HYAI_DEFAULT_MODEL,
+    fallback_models=(HYAI_DEFAULT_MODEL,),
+)
+
+register_provider(hostyourai)
+
+
+# --- /hyai command -----------------------------------------------------------
+
+
 def register(ctx) -> None:
+    global _ctx
+    _ctx = ctx
+
     def _handle_hyai(raw_args: str):
         parts = (raw_args or "").split()
         first = parts[0].lower() if parts else ""
@@ -430,7 +564,7 @@ def register(ctx) -> None:
         # setting (it used to read it out of Hermes's private state.db). Nothing here is
         # gated on the model any more: the setting is always accepted, and takes effect
         # only when the chat is actually on hyai/auto — that check lives solely in the
-        # hostyourai provider profile, at request time.
+        # provider profile above, at request time.
         if not parts or first == "status":
             status = _format_status(state)
             # No picker exists on text surfaces (Telegram), so bare /hyai also lists the choices.

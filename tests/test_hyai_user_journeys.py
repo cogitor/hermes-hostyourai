@@ -1,16 +1,13 @@
-"""End-to-end user-journey tests for the hyai-router + hostyourai pair.
+"""End-to-end user-journey tests for the merged hostyourai plugin.
 
 Unlike test_hyai_router.py (handler-level unit tests) and
 test_hostyourai_provider.py (provider-hook unit tests), these exercise a
-realistic sequence of ``/hyai`` calls through a SHARED config store and then
-assert what the provider profile would actually put on the wire — i.e. the
-same round trip a real user triggers: type a slash command, then send a
-message to hyai/auto.
-
-Both plugin modules are loaded against one `SharedConfigStore` so a `/hyai`
-call and a subsequent `build_extra_body`/`build_api_kwargs_extras` call see
-the same persisted state, the way they do in a real Hermes process (both
-read/write ``plugins.entries.hyai-router.settings.hyai_routing``).
+realistic sequence of ``/hyai`` calls through the plugin's own ``ctx``
+and then assert what the provider profile would actually put on the
+wire — i.e. the same round trip a real user triggers: type a slash
+command, then send a message to hyai/auto. Both roles are the same
+plugin and share the same ``ctx`` captured at ``register(ctx)`` time,
+so no separate shared-store rig is needed any more.
 """
 
 from __future__ import annotations
@@ -21,23 +18,10 @@ import types
 import unittest
 from pathlib import Path
 
-_ROUTER_PATH = Path(__file__).resolve().parent.parent / "hyai-router" / "__init__.py"
-_PROVIDER_PATH = Path(__file__).resolve().parent.parent / "model-providers" / "hostyourai" / "__init__.py"
+_MODULE_PATH = Path(__file__).resolve().parent.parent / "hostyourai" / "__init__.py"
 
 
-def _load(path: Path, name: str):
-    spec = importlib.util.spec_from_file_location(name, path)
-    assert spec and spec.loader
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-def _install_fake_hermes_modules(get_routing_state):
-    """Same fakes as test_hostyourai_provider.py, but reads live from ``get_routing_state``
-    (a zero-arg callable) on every call — so a journey test's /hyai calls are
-    immediately visible to the provider profile, like a real shared config.yaml."""
-
+def _install_fake_hermes_modules():
     providers_pkg = types.ModuleType("providers")
     providers_pkg.register_provider = lambda profile: None
     sys.modules["providers"] = providers_pkg
@@ -52,44 +36,19 @@ def _install_fake_hermes_modules(get_routing_state):
     providers_base.ProviderProfile = _FakeProviderProfile
     sys.modules["providers.base"] = providers_base
 
-    hermes_cli_pkg = types.ModuleType("hermes_cli")
-    sys.modules["hermes_cli"] = hermes_cli_pkg
 
-    def _config():
-        state = get_routing_state()
-        entry = {"settings": {"hyai_routing": state}} if state is not None else {}
-        return {"plugins": {"entries": {"hyai-router": entry}}}
-
-    config_mod = types.ModuleType("hermes_cli.config")
-    config_mod.load_config_readonly = _config
-    sys.modules["hermes_cli.config"] = config_mod
-
-
-def _load_provider(get_routing_state):
-    _install_fake_hermes_modules(get_routing_state)
-    mod_name = "hostyourai_journey_under_test"
-    sys.modules.pop(mod_name, None)
-    spec = importlib.util.spec_from_file_location(mod_name, _PROVIDER_PATH)
-    assert spec and spec.loader
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-class SharedConfigStore:
-    """Stands in for config.yaml's plugin-settings namespace, shared across both plugins."""
+class FakeCtx:
+    """Minimal in-memory stand-in for the real plugin ``ctx``."""
 
     def __init__(self):
-        self._routing: dict = {}
+        self._store: dict = {}
+        self.handler = None
 
-    # --- hyai-router's ctx surface -----------------------------------------
     def get_config(self, key, default=None):
-        assert key == "hyai_routing"
-        return dict(self._routing) if self._routing else default
+        return self._store.get(key, default)
 
     def set_config(self, key, value):
-        assert key == "hyai_routing"
-        self._routing = dict(value) if value else {}
+        self._store[key] = value
 
     def register_hook(self, name, callback):
         pass
@@ -101,20 +60,26 @@ class SharedConfigStore:
         self.handler = handler
 
 
+def _load_module():
+    _install_fake_hermes_modules()
+    mod_name = "hostyourai_journey_under_test"
+    sys.modules.pop(mod_name, None)
+    spec = importlib.util.spec_from_file_location(mod_name, _MODULE_PATH)
+    assert spec and spec.loader
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
 class JourneyTestCase(unittest.TestCase):
     """Each test drives /hyai like a user would, then checks the wire request."""
 
     def setUp(self):
-        self.router_mod = _load(_ROUTER_PATH, "hyai_router_journey")
-        self.store = SharedConfigStore()
-        self.router_mod.register(self.store)
-        self.hyai = self.store.handler  # the /hyai handler, call like self.hyai("task code")
-
-        # Load the provider profile wired to read live from the SAME store the
-        # /hyai handler writes to — the real cross-plugin contract (shared
-        # config.yaml key), not an in-process object reference.
-        self.provider_mod = _load_provider(lambda: self.store.get_config("hyai_routing", None))
-        self.profile = self.provider_mod.hostyourai
+        self.mod = _load_module()
+        self.ctx = FakeCtx()
+        self.mod.register(self.ctx)
+        self.hyai = self.ctx.handler  # the /hyai handler, call like self.hyai("task code")
+        self.profile = self.mod.hostyourai
 
     def _extra_body(self, model="hyai/auto"):
         return self.profile.build_extra_body(model=model)
@@ -145,9 +110,9 @@ class JourneyTestCase(unittest.TestCase):
 
         # Simulate the one-off config.yaml edit a user does directly (not via /hyai —
         # transport has no /hyai subcommand per the new UX).
-        state = self.store.get_config("hyai_routing", {})
+        state = self.ctx.get_config(self.mod.CONFIG_KEY, {})
         state["transport"] = "headers"
-        self.store.set_config("hyai_routing", state)
+        self.ctx.set_config(self.mod.CONFIG_KEY, state)
 
         self.assertEqual(self._extra_body(), {})  # body path goes quiet
         self.assertEqual(
@@ -169,12 +134,12 @@ class JourneyTestCase(unittest.TestCase):
     # --- journey 5: /hyai off preserves a config-only transport setting -----
     def test_off_does_not_clobber_config_only_transport(self):
         self.hyai("task code")
-        state = self.store.get_config("hyai_routing", {})
+        state = self.ctx.get_config(self.mod.CONFIG_KEY, {})
         state["transport"] = "headers"
-        self.store.set_config("hyai_routing", state)
+        self.ctx.set_config(self.mod.CONFIG_KEY, state)
 
         self.hyai("off")
-        self.assertEqual(self.store.get_config("hyai_routing", {}), {"transport": "headers"})
+        self.assertEqual(self.ctx.get_config(self.mod.CONFIG_KEY, {}), {"transport": "headers"})
         # And it stays inert until task/policy are set again.
         self.assertEqual(self._api_extras(), ({}, {}))
 

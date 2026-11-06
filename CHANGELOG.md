@@ -1,11 +1,31 @@
 # Changelog
 
 ## Unreleased
+
+## 0.4.0 — BREAKING: merged into one plugin
+- **Breaking:** the two separate plugins `hyai-router` and `hostyourai-profile` are merged
+  into a single plugin named `hostyourai` (directory `hostyourai/`, one `plugin.yaml`). They
+  were always tightly coupled — the `/hyai` command is meaningless without the `hostyourai`
+  provider — and now ship, install and uninstall as one unit.
+- **Upgrade:** uninstall both old plugins (`hermes plugins uninstall hyai-router` and
+  `hermes plugins uninstall hostyourai-profile`), then install the new `hostyourai` plugin
+  from the updated `hermes-pack.yaml`.
+- This is a structural change only, not a behavior change for users: the provider profile,
+  the `/hyai` command and all of its subcommands (`task`, `policy`, `off`, `clear`, `status`,
+  `usage`, `help`), the auto task-pick middleware, and usage/balance reporting behave exactly
+  as before.
+- Internal-only simplification (invisible to users): the provider profile now reads the
+  persisted routing state through the same `ctx.get_config(CONFIG_KEY, ...)` call the `/hyai`
+  command uses to write it, instead of manually parsing the other (now nonexistent) plugin's
+  `plugins.entries.hyai-router.settings.hyai_routing` config path. That cross-plugin config-key
+  coupling only existed because the two roles used to be separate plugins.
+
+## Fix (previously Unreleased, now part of 0.4.0)
 - Fix: `/hyai` (the hyai/auto routing-hint feature — `/hyai task|policy|off|clear`) no longer
   reads Hermes's private `state.db`/`gateway_routing` table to check the chat's current model
   before accepting a change. The setting is now always accepted. This behavior change is
   scoped only to `/hyai`'s task/policy routing hint; it does not affect the `hostyourai`
-  provider profile, `/hyai usage` reporting, or any other part of the plugin suite — the real
+  provider profile, `/hyai usage` reporting, or any other part of the plugin — the real
   and only gate on hyai/auto (the provider profile's strict `model == "hyai/auto"` check at
   request time) is unchanged. Users who are not on `hyai/auto` no longer see a "not
   applicable"/"only apply to hostyourai hyai/auto" warning when changing the setting; it is

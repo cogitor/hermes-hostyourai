@@ -1,8 +1,11 @@
 # AGENTS.md — hermes-hostyourai
 
-Standalone, unofficial Hermes Agent plugin pack (NOT upstream): a `hostyourai` provider profile
-(`model-providers/hostyourai`) and the `/hyai` command (`hyai-router`) that steers HostYourAI's
-`hyai/auto` router with task/policy hints. Private repo `cogitor/hermes-hostyourai`.
+Standalone, unofficial Hermes Agent plugin (NOT upstream): a single plugin (`hostyourai/`) that
+registers the `hostyourai` provider profile and the `/hyai` command together, steering HostYourAI's
+`hyai/auto` router with task/policy hints. Previously two separate plugins (`hyai-router` +
+`model-providers/hostyourai`); merged into one plugin, one directory, one `plugin.yaml` at 0.4.0
+because the command is meaningless without the provider — one catalog listing, not two.
+Private repo `cogitor/hermes-hostyourai`.
 
 ## Commands
 - `scripts/check.sh` — THE gate (ruff check, ruff format --check, secret scan, tests). Run before every commit; the pre-commit hook and CI run the same script. Install the hook: `scripts/install-git-hooks.sh`.
@@ -44,10 +47,10 @@ Standalone, unofficial Hermes Agent plugin pack (NOT upstream): a `hostyourai` p
   minutes and answers 503 meanwhile. Use prompts that cannot make the agent write files.
 
 ## Release/manifest contract
-`hermes-pack.yaml` `version` == the git tag == both `plugin.yaml` versions; both plugin pins are the same full 40-char code commit SHA. `tests/test_manifest_sync.py` checks the relationships.
+`hermes-pack.yaml` `version` == the git tag == the single `plugin.yaml` version; the pack's one plugin pin is the full 40-char code commit SHA. `tests/test_manifest_sync.py` checks the relationships.
 
 ## Catalog readiness (decisions)
-- Goal: listable in NousResearch/hermes-agent `plugin-catalog/` (one YAML per plugin, human-reviewed, full-SHA pin). Do not open that PR or make the repo public without Emil's say-so.
+- Goal: one listing in NousResearch/hermes-agent `plugin-catalog/` (one YAML, one plugin, human-reviewed, full-SHA pin). Do not open that PR or make the repo public without Emil's say-so.
 - `plugin.yaml` is manifest v2: `requires_hermes: ">=0.21.7"` (SemVer floor, never CalVer; 0.21.7 is the first release with `argument_mode`, which `/hyai` uses). Raise the floor only after finding the first release shipping a newly used API (compare tags' source).
 - `plugin.yaml` `version` must equal the pack version and the tag; the pinned commit must carry it (tests enforce from 0.1.7).
 - README must keep the disclosure section accurate: network target, credential path, `config.yaml` write, no telemetry, no self-update. Update it whenever behavior changes (catalog rule 13: undisclosed behavior = changes requested).

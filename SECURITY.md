@@ -13,7 +13,7 @@ Hermes version.
   `/hyai usage` reads it from the environment to call HostYourAI directly; it goes only in the Authorization header to `hostyourai.com`,
   redirects are refused, and it is never put in a reply or log line.
 - `/hyai` stores two short choices (task, policy) in your Hermes config under
-  `plugins.entries.hyai-router.settings`. They are shared by every chat on the
+  `plugins.entries.hostyourai.settings`. They are shared by every chat on the
   same Hermes profile.
 - On requests to `hyai/auto` only, it adds those two choices to the request.
   Nothing else is added, and no conversation content is read or sent by the plugin.

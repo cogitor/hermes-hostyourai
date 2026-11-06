@@ -1,7 +1,7 @@
 # hermes-hostyourai
 
 [![CI](https://github.com/cogitor/hermes-hostyourai/actions/workflows/ci.yml/badge.svg)](https://github.com/cogitor/hermes-hostyourai/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-v0.3.2-blue)](https://github.com/cogitor/hermes-hostyourai/tags)
+[![Version](https://img.shields.io/badge/version-v0.4.0-blue)](https://github.com/cogitor/hermes-hostyourai/tags)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 Use [HostYourAI](https://hostyourai.com) from [Hermes Agent](https://github.com/NousResearch/hermes-agent),
@@ -21,12 +21,15 @@ and tell its automatic model picker what kind of work you are doing.
 
 ## What you get
 
+One plugin, `hostyourai`:
+
 - **HostYourAI as a provider.** It shows up in Hermes's model picker, so you
   don't need the generic custom-endpoint setup. Default model: `hyai/auto`.
 - **A `/hyai` command** to give `hyai/auto` a hint about the work, for example
   "this is code, optimise for speed".
 
-The two parts are independent. Install either one alone.
+The command is meaningless without the provider, so they ship as a single
+installable unit.
 
 ## Requirements
 
@@ -38,19 +41,16 @@ The two parts are independent. Install either one alone.
 ```bash
 curl -O https://raw.githubusercontent.com/cogitor/hermes-hostyourai/main/hermes-pack.yaml
 hermes plugins pack install ./hermes-pack.yaml
-hermes plugins enable hyai-router
-hermes plugins enable hostyourai-profile
+hermes plugins enable hostyourai
 ```
 
 Then add your key (`hermes config set HOSTYOURAI_API_KEY`) and pick the
-provider with `hermes model`. 
+provider with `hermes model`.
 
-To install just one part:
-
-```bash
-hermes plugins install cogitor/hermes-hostyourai/hyai-router
-hermes plugins install cogitor/hermes-hostyourai/model-providers/hostyourai
-```
+> **Upgrading from 0.3.x?** The old two-plugin install (`hyai-router` +
+> `hostyourai-profile`) is replaced by this single `hostyourai` plugin.
+> Uninstall both old plugins before installing the new one:
+> `hermes plugins uninstall hyai-router && hermes plugins uninstall hostyourai-profile`.
 
 ## Use it
 
@@ -117,9 +117,9 @@ off again. `/hyai` shows what the last message got.
 - `/hyai usage` makes one request that only reads your balance to the same address
   with your key, only when you run it, never in a group chat, and it never
   follows a redirect. The result is kept in memory for a minute, not saved.
-- `/hyai` saves your choice in your Hermes `config.yaml`. The command itself
-  reads no other Hermes internal state — it no longer checks which model the
-  chat is on before accepting a change.
+- `/hyai` saves your choice in your Hermes `config.yaml`, under this plugin's own
+  settings. The command reads no other Hermes internal state — it no longer
+  checks which model the chat is on before accepting a change.
 - It never touches your system prompt, so prompt caching keeps working.
 
 ## Known limits

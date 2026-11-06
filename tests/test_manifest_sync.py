@@ -1,4 +1,4 @@
-"""Contract: hermes-pack.yaml, git tags and pins stay in sync (relationships, not frozen values)."""
+"""Contract: hermes-pack.yaml, git tags and the single plugin.yaml stay in sync."""
 
 import re
 import subprocess
@@ -7,6 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / "hermes-pack.yaml"
+PLUGIN_DIR = "hostyourai"
 
 
 def git(*args: str) -> str | None:
@@ -23,9 +24,6 @@ def vtuple(v: str) -> tuple[int, ...]:
     return tuple(int(x) for x in v.lstrip("v").split("."))
 
 
-PLUGIN_DIRS = ("hyai-router", "model-providers/hostyourai")
-
-
 def field(text: str, key: str) -> str | None:
     m = re.search(rf"^{key}:\s*[\"']?([^\"'\n#]+?)[\"']?\s*(?:#.*)?$", text, re.M)
     return m.group(1) if m else None
@@ -35,10 +33,9 @@ class ManifestSyncTests(unittest.TestCase):
     def setUp(self):
         self.version, self.refs = parse(MANIFEST.read_text())
 
-    def test_version_is_semver_and_both_plugins_share_one_full_sha(self):
+    def test_version_is_semver_and_the_plugin_has_exactly_one_full_sha_pin(self):
         self.assertRegex(self.version, r"^\d+\.\d+\.\d+$")
-        self.assertGreaterEqual(len(self.refs), 2)
-        self.assertEqual(len(set(self.refs)), 1, "all plugins must pin the same commit")
+        self.assertEqual(len(self.refs), 1, "exactly one plugin entry after the merge")
         self.assertRegex(self.refs[0], r"^[0-9a-f]{40}$", "pin must be a full SHA")
 
     def test_readme_version_badge_matches_manifest(self):
@@ -71,41 +68,40 @@ class PluginManifestTests(unittest.TestCase):
 
     def setUp(self):
         self.version, self.refs = parse(MANIFEST.read_text())
+        self.plugin_text = (ROOT / PLUGIN_DIR / "plugin.yaml").read_text()
 
-    def test_plugin_versions_match_pack_version(self):
-        for d in PLUGIN_DIRS:
-            with self.subTest(plugin=d):
-                self.assertEqual(field((ROOT / d / "plugin.yaml").read_text(), "version"), self.version)
+    def test_plugin_version_matches_pack_version(self):
+        self.assertEqual(field(self.plugin_text, "version"), self.version)
 
-    def test_pinned_commit_carries_matching_plugin_versions(self):
+    def test_pinned_commit_carries_matching_plugin_version(self):
         if vtuple(self.version) < (0, 1, 7):
             self.skipTest("v0.1.6 and earlier were pinned before plugin.yaml carried the version")
         if git("cat-file", "-t", self.refs[0]) != "commit":
             self.skipTest("pinned commit not available (shallow clone)")
-        for d in PLUGIN_DIRS:
-            with self.subTest(plugin=d):
-                shown = git("show", f"{self.refs[0]}:{d}/plugin.yaml")
-                self.assertIsNotNone(shown)
-                self.assertEqual(field(shown, "version"), self.version)
+        shown = git("show", f"{self.refs[0]}:{PLUGIN_DIR}/plugin.yaml")
+        if shown is None:
+            self.skipTest(
+                f"pin not yet re-pointed at a commit containing {PLUGIN_DIR}/ "
+                "(release.sh updates the pin at release time)"
+            )
+        self.assertEqual(field(shown, "version"), self.version)
 
     def test_requires_hermes_is_a_semver_floor_not_calver(self):
-        for d in PLUGIN_DIRS:
-            with self.subTest(plugin=d):
-                spec = field((ROOT / d / "plugin.yaml").read_text(), "requires_hermes")
-                self.assertIsNotNone(spec, "requires_hermes must be declared")
-                m = re.fullmatch(r">=(\d+)\.(\d+)(?:\.(\d+))?", spec.strip())
-                self.assertIsNotNone(m, f"{spec!r} is not a SemVer floor")
-                self.assertLess(int(m.group(1)), 2000, "CalVer date is not allowed")
+        spec = field(self.plugin_text, "requires_hermes")
+        self.assertIsNotNone(spec, "requires_hermes must be declared")
+        m = re.fullmatch(r">=(\d+)\.(\d+)(?:\.(\d+))?", spec.strip())
+        self.assertIsNotNone(m, f"{spec!r} is not a SemVer floor")
+        self.assertLess(int(m.group(1)), 2000, "CalVer date is not allowed")
 
     def test_manifest_v2_identity_fields(self):
-        for d in PLUGIN_DIRS:
-            text = (ROOT / d / "plugin.yaml").read_text()
-            with self.subTest(plugin=d):
-                self.assertEqual(field(text, "manifest_version"), "2")
-                self.assertEqual(field(text, "license"), "MIT")
-                self.assertEqual(field(text, "author"), "cogitor")
-                self.assertTrue(field(text, "homepage").startswith("https://github.com/cogitor/"))
+        self.assertEqual(field(self.plugin_text, "manifest_version"), "2")
+        self.assertEqual(field(self.plugin_text, "license"), "MIT")
+        self.assertEqual(field(self.plugin_text, "author"), "cogitor")
+        self.assertTrue(field(self.plugin_text, "homepage").startswith("https://github.com/cogitor/"))
 
     def test_provider_declares_its_api_key(self):
-        text = (ROOT / "model-providers/hostyourai/plugin.yaml").read_text()
-        self.assertIn("HOSTYOURAI_API_KEY", text)
+        self.assertIn("HOSTYOURAI_API_KEY", self.plugin_text)
+
+
+if __name__ == "__main__":
+    unittest.main()

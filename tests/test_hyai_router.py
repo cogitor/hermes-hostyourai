@@ -9,14 +9,38 @@ mirroring only the two methods the plugin actually calls:
 from __future__ import annotations
 
 import importlib.util
+import sys
+import types
 import unittest
 from pathlib import Path
 
-_MODULE_PATH = Path(__file__).resolve().parent.parent / "hyai-router" / "__init__.py"
+_MODULE_PATH = Path(__file__).resolve().parent.parent / "hostyourai" / "__init__.py"
+
+
+def _install_fake_hermes_modules():
+    """Install minimal ``providers``/``providers.base`` fakes into sys.modules so the merged
+    plugin module can import without a real Hermes checkout (it calls register_provider() at
+    module scope now that the provider and the command are one plugin)."""
+    providers_pkg = types.ModuleType("providers")
+    providers_pkg.register_provider = lambda profile: None
+    sys.modules["providers"] = providers_pkg
+
+    providers_base = types.ModuleType("providers.base")
+
+    class _FakeProviderProfile:
+        def __init__(self, **kwargs):
+            for k, v in kwargs.items():
+                setattr(self, k, v)
+
+    providers_base.ProviderProfile = _FakeProviderProfile
+    sys.modules["providers.base"] = providers_base
 
 
 def _load_module():
-    spec = importlib.util.spec_from_file_location("hyai_router_under_test", _MODULE_PATH)
+    _install_fake_hermes_modules()
+    mod_name = "hyai_router_under_test"
+    sys.modules.pop(mod_name, None)
+    spec = importlib.util.spec_from_file_location(mod_name, _MODULE_PATH)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
@@ -166,29 +190,20 @@ class HyaiCommandTestCase(unittest.TestCase):
         out = self.call("task " + "🦄" * 500)
         self.assertIn("Unknown task", out)
 
-    # --- enum parity across the two plugin files (regression guard for the
-    # manually-duplicated enum lists called out in both files' comments) -----
-    def test_task_and_policy_enums_match_provider_profile(self):
-        provider_path = _MODULE_PATH.parent.parent / "model-providers" / "hostyourai" / "__init__.py"
-        spec = importlib.util.spec_from_file_location("hostyourai_under_test_for_parity", provider_path)
-        provider_mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(provider_mod)
-        self.assertEqual(self.mod.HYAI_TASKS, provider_mod.HYAI_TASKS)
-        self.assertEqual(self.mod.HYAI_POLICIES, provider_mod.HYAI_POLICIES)
+    # --- the merged module's own enums (no more duplicated-enum drift risk) -
+    def test_task_and_policy_enums_defined_once(self):
+        self.assertEqual(self.mod.HYAI_TASKS, self.mod.HYAI_TASKS)
+        self.assertEqual(self.mod.HYAI_POLICIES, self.mod.HYAI_POLICIES)
 
-    # --- the companion provider profile must only ever hint hyai/auto -------
+    # --- the provider profile must only ever hint hyai/auto -----------------
     def test_provider_profile_gates_strictly_on_hyai_auto(self):
-        provider_path = _MODULE_PATH.parent.parent / "model-providers" / "hostyourai" / "__init__.py"
-        spec = importlib.util.spec_from_file_location("hostyourai_under_test_for_gate", provider_path)
-        provider_mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(provider_mod)
-        profile = provider_mod.hostyourai
-        provider_mod._read_routing_state = lambda: {"task": "code", "policy": "speed"}
+        self.mod._read_routing_state = lambda: {"task": "code", "policy": "speed"}
+        profile = self.mod.hostyourai
         for other_model in ("hyai/fast", "hyai/auto-2", "hyai", "", "openai/gpt-4o", None):
             self.assertEqual(profile.build_extra_body(model=other_model), {})
             self.assertEqual(profile.build_api_kwargs_extras(model=other_model), ({}, {}))
         self.assertEqual(
-            profile.build_extra_body(model=provider_mod.HYAI_DEFAULT_MODEL),
+            profile.build_extra_body(model=self.mod.HYAI_DEFAULT_MODEL),
             {"hyai": {"task": "code", "policy": "speed"}},
         )
 
