@@ -50,8 +50,5 @@ jobs:
           git clone --depth 1 --branch v0.22.2 https://github.com/NousResearch/hermes-agent "$RUNNER_TEMP/hermes"
           pip install -e "$RUNNER_TEMP/hermes"
 
-      - name: Validate both plugins
-        run: |
-          for d in hyai-router model-providers/hostyourai; do
-            hermes plugins validate "$d" --install-deps
-          done
+      - name: Validate plugin
+        run: hermes plugins validate hostyourai --install-deps

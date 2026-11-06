@@ -26,7 +26,7 @@ body:
     attributes:
       label: Which part?
       options:
-        - /hyai command (hyai-router)
+        - /hyai command (hostyourai plugin)
         - Provider profile (hostyourai)
         - Install or update
         - Not sure
