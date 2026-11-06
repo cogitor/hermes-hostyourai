@@ -41,9 +41,7 @@ installable unit.
 ## Install
 
 ```bash
-curl -O https://raw.githubusercontent.com/cogitor/hermes-hostyourai/main/hermes-pack.yaml
-hermes plugins pack install ./hermes-pack.yaml
-hermes plugins enable hostyourai
+hermes plugins install cogitor/hermes-hostyourai/hostyourai --enable
 ```
 
 Then add your key (`hermes config set HOSTYOURAI_API_KEY`) and pick the
