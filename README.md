@@ -30,9 +30,6 @@ One plugin, `hostyourai`:
 - **A `/hyai` command** to give `hyai/auto` a hint about the work, for example
   "this is code, optimise for speed".
 
-The command is meaningless without the provider, so they ship as a single
-installable unit.
-
 ## Requirements
 
 - Hermes Agent 0.21.7 or newer
