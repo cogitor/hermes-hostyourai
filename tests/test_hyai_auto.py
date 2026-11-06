@@ -17,7 +17,6 @@ from unittest import mock
 from test_hyai_router import FakeCtx, _load_module
 
 FAKE_KEY = "not-a-real-credential-placeholder"
-HYAI_AUTO = ("hostyourai", "hyai/auto")
 LONG = "Please fix the failing unit test in my parser module."
 PREV = "I am working on a small tokenizer in Python."
 
@@ -84,8 +83,6 @@ class AutoTestCase(unittest.TestCase):
         self.addCleanup(self.stub.close)
         self.mod = _load_module()
         self.mod.AUTO_BASE = self.stub.base
-        self.model = HYAI_AUTO
-        self.mod._active_model = lambda: self.model
         self.ctx = FakeCtx()
         self.mod.register(self.ctx)
         self.ctx.set_config(self.mod.CONFIG_KEY, {"task": "auto"})
@@ -129,7 +126,7 @@ class AutoTestCase(unittest.TestCase):
 
 
 class AutoSpec(AutoTestCase):
-    def test_A1_task_auto_is_saved_on_hyai_auto_only_and_any_other_value_replaces_it(self):
+    def test_A1_task_auto_is_saved_like_any_other_task_value_and_any_other_value_replaces_it(self):
         self.ctx.set_config(self.mod.CONFIG_KEY, {})
         self.assertIn("task=auto", self.ctx.handler("task auto"))
         self.assertEqual(self.ctx.get_config(self.mod.CONFIG_KEY)["task"], "auto")
@@ -138,9 +135,8 @@ class AutoSpec(AutoTestCase):
         self.ctx.handler("task auto")
         self.ctx.handler("off")
         self.assertNotIn("task", self.ctx.get_config(self.mod.CONFIG_KEY))
-        self.model = ("mistral", "mistral-small-latest")
-        self.assertIn("Nothing changed", self.ctx.handler("task auto"))
-        self.assertNotIn("task", self.ctx.get_config(self.mod.CONFIG_KEY))
+        self.assertIn("task=auto", self.ctx.handler("task auto"))
+        self.assertEqual(self.ctx.get_config(self.mod.CONFIG_KEY)["task"], "auto")
         self.assertIn("auto", self.ctx.handler("help"))
 
     def test_A2_the_hint_is_added_only_when_the_saved_task_is_auto_and_the_model_is_hyai_auto(self):

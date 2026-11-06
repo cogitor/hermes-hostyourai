@@ -76,13 +76,13 @@ any model.
 
 The setting sticks until you change it, and it is shared: it applies to every
 chat on the same Hermes profile, and anyone who can use `/hyai` there can
-change it. It only applies to `hyai/auto`:
-any other model or provider never receives it. Switch models with `/model`
-and the hint stops; switch back and it resumes.
+change it. `/hyai` itself never checks which model the chat is on — it always
+accepts the setting. The setting only has an effect when a chat is actually on
+`hyai/auto`: that check lives in the `hostyourai` provider profile at request
+time, not in `/hyai` itself. Any other model or provider never receives it.
+Switch models with `/model` and the hint stops; switch back and it resumes.
 
-`/hyai` and `/hyai usage` work on any model. If changing the task or policy
-replies "only apply to hostyourai hyai/auto", the chat is on a different model;
-nothing was changed.
+`/hyai`, `/hyai status` and `/hyai usage` all work the same on every model.
 
 ### Experimental
 
@@ -117,9 +117,9 @@ off again. `/hyai` shows what the last message got.
 - `/hyai usage` makes one request that only reads your balance to the same address
   with your key, only when you run it, never in a group chat, and it never
   follows a redirect. The result is kept in memory for a minute, not saved.
-- `/hyai` saves your choice in your Hermes `config.yaml`.
-- To check which model a chat is using, it reads Hermes's session database in
-  read-only mode. If that fails, it does nothing rather than guess.
+- `/hyai` saves your choice in your Hermes `config.yaml`. The command itself
+  reads no other Hermes internal state — it no longer checks which model the
+  chat is on before accepting a change.
 - It never touches your system prompt, so prompt caching keeps working.
 
 ## Known limits
@@ -131,8 +131,6 @@ off again. `/hyai` shows what the last message got.
 - On Hermes older than 0.21.7, `/hyai` still works but auto does nothing.
 - `/hyai` with no arguments shows its options as text. Telegram buttons would
   need support in Hermes itself.
-- Checking the chat's model relies on a Hermes internal that may change. If it
-  does, `/hyai` refuses safely instead of misbehaving.
 
 ## Troubleshooting
 

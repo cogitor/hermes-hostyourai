@@ -9,8 +9,6 @@ mirroring only the two methods the plugin actually calls:
 from __future__ import annotations
 
 import importlib.util
-import sys
-import types
 import unittest
 from pathlib import Path
 
@@ -55,81 +53,18 @@ class FakeCtx:
 class HyaiCommandTestCase(unittest.TestCase):
     def setUp(self):
         self.mod = _load_module()
-        self.model = ("hostyourai", "hyai/auto")
-        self.mod._active_model = lambda: self.model
         self.ctx = FakeCtx()
         self.mod.register(self.ctx)
         self.call = self.ctx.handler
 
-    # --- only applies to hostyourai hyai/auto -------------------------------
-    def test_refuses_on_other_models_and_changes_nothing(self):
-        for model in (
-            ("mistral", "mistral-small-latest"),
-            ("hostyourai", "hyai/fast"),
-            ("hostyourai", "hyai/auto-2"),
-            ("other", "hyai/auto"),
-            ("", ""),
-        ):
-            self.model = model
-            for args in ("task code", "policy cost", "off", "code cost"):
-                self.assertIn("only apply to hostyourai hyai/auto", self.call(args))
-            self.assertEqual(self.ctx.get_config(self.mod.CONFIG_KEY, {}), {})
-
-    def test_status_is_readable_on_other_models_with_a_note(self):
-        self.ctx.set_config(self.mod.CONFIG_KEY, {"task": "code"})
-        self.model = ("mistral", "mistral-small-latest")
-        for args in ("", "status"):
-            out = self.call(args)
-            self.assertIn("task=code", out)
-            self.assertIn("only apply to hostyourai hyai/auto", out)
-
-    def test_session_selection_wins_over_config_default(self):
-        mod = _load_module()
-        mod._session_route = lambda: ("mistral", "mistral-small-latest")
-        mod._config_route = lambda: ("hostyourai", "hyai/auto")
-        self.assertEqual(mod._active_model(), ("mistral", "mistral-small-latest"))
-        self.assertIn("only apply", mod._not_applicable())
-
-    def test_session_model_without_provider_does_not_borrow_config_provider(self):
-        mod = _load_module()
-        mod._session_route = lambda: ("", "claude-sonnet-5")
-        mod._config_route = lambda: ("hostyourai", "hyai/auto")
-        self.assertEqual(mod._active_model(), ("", "claude-sonnet-5"))
-        self.assertIn("Current model: claude-sonnet-5.", mod._not_applicable())
-        mod._session_route = lambda: ("", "hyai/auto")
-        self.assertIsNone(mod._not_applicable())
-
-    def test_config_is_fallback_only_when_session_has_no_model(self):
-        mod = _load_module()
-        mod._session_route = lambda: ("", "")
-        mod._config_route = lambda: ("hostyourai", "hyai/auto")
-        self.assertEqual(mod._active_model(), ("hostyourai", "hyai/auto"))
-        self.assertIsNone(mod._not_applicable())
-
-    def test_missing_routing_row_falls_back_to_config(self):
-        # A local/TUI/dashboard session with a session key but no gateway_routing row:
-        # the config default is what's actually in effect, so it must not read "unknown".
-        # SPEC R12.
-        mod = _load_module()
-
-        def raise_lookup():
-            raise LookupError("no routing row for session 'k'")
-
-        mod._session_route = raise_lookup
-        mod._config_route = lambda: ("hostyourai", "hyai/auto")
-        self.assertEqual(mod._active_model(), ("hostyourai", "hyai/auto"))
-        self.assertIsNone(mod._not_applicable())
-
-    def test_unreadable_state_fails_closed(self):
-        mod = _load_module()
-
-        def boom():
-            raise RuntimeError("x")
-
-        mod._session_route = boom
-        mod._config_route = boom
-        self.assertEqual(mod._active_model(), ("", ""))
-        self.assertIn("unknown", mod._not_applicable())
+    # --- the setting is always accepted regardless of the chat's model -----
+    def test_changes_are_always_accepted_regardless_of_model(self):
+        # The command no longer reads or checks the chat's active model at all; task/policy
+        # changes always persist. The real (and only) gate on hyai/auto is in the provider
+        # profile at request time.
+        for args, key, value in (("task code", "task", "code"), ("policy cost", "policy", "cost")):
+            self.call(args)
+            self.assertEqual(self.ctx.get_config(self.mod.CONFIG_KEY, {}).get(key), value)
 
     # --- registration shape ------------------------------------------------
     def test_registers_as_options_mode(self):
@@ -256,156 +191,6 @@ class HyaiCommandTestCase(unittest.TestCase):
             profile.build_extra_body(model=provider_mod.HYAI_DEFAULT_MODEL),
             {"hyai": {"task": "code", "policy": "speed"}},
         )
-
-
-class RealRoutingReadTests(unittest.TestCase):
-    """Exercise the real SQL/JSON path against a temp state.db with the real gateway_routing schema."""
-
-    SCOPE = "/h/sessions"
-
-    def setUp(self):
-        import json
-        import sqlite3
-        import tempfile
-
-        self.mod = _load_module()
-        self.json = json
-        self.tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.tmp.cleanup)
-        self.db = f"{self.tmp.name}/state.db"
-        conn = sqlite3.connect(self.db)
-        conn.execute(
-            "CREATE TABLE gateway_routing (scope TEXT NOT NULL DEFAULT '', session_key TEXT NOT NULL, "
-            "entry_json TEXT NOT NULL, updated_at REAL NOT NULL, PRIMARY KEY (scope, session_key))"
-        )
-        conn.commit()
-        conn.close()
-
-    def _put(self, scope, key, entry, ts=1.0):
-        import sqlite3
-
-        conn = sqlite3.connect(self.db)
-        conn.execute("INSERT INTO gateway_routing VALUES (?,?,?,?)", (scope, key, self.json.dumps(entry), ts))
-        conn.commit()
-        conn.close()
-
-    def test_reads_override_for_exact_scope_and_key(self):
-        self._put(self.SCOPE, "k1", {"model_override": {"provider": "mistral", "model": "m-small"}})
-        self._put(self.SCOPE, "k2", {"model_override": {"provider": "hostyourai", "model": "hyai/auto"}})
-        self.assertEqual(self.mod._routing_override(self.db, self.SCOPE, "k1"), ("mistral", "m-small"))
-        self.assertEqual(self.mod._routing_override(self.db, self.SCOPE, "k2"), ("hostyourai", "hyai/auto"))
-
-    def test_other_scope_never_leaks_even_if_newer(self):
-        self._put(self.SCOPE, "k", {"model_override": {"provider": "mistral", "model": "m"}}, ts=1.0)
-        self._put(
-            "/other/sessions",
-            "k",
-            {"model_override": {"provider": "hostyourai", "model": "hyai/auto"}},
-            ts=9.0,
-        )
-        self.assertEqual(self.mod._routing_override(self.db, self.SCOPE, "k"), ("mistral", "m"))
-
-    def test_no_row_or_no_override_is_empty(self):
-        self._put(self.SCOPE, "k", {"session_id": "x"})
-        self.assertEqual(self.mod._routing_override(self.db, self.SCOPE, "k"), ("", ""))
-        with self.assertRaises(LookupError):  # unknown row -> gate fails closed, no config fallback
-            self.mod._routing_override(self.db, self.SCOPE, "missing")
-
-    def test_malformed_json_and_missing_table_raise_so_gate_fails_closed(self):
-        import sqlite3
-
-        conn = sqlite3.connect(self.db)
-        conn.execute("INSERT INTO gateway_routing VALUES (?,?,?,?)", (self.SCOPE, "bad", "{not json", 1.0))
-        conn.commit()
-        conn.close()
-        with self.assertRaises(ValueError):
-            self.mod._routing_override(self.db, self.SCOPE, "bad")
-        with self.assertRaises(sqlite3.Error):
-            self.mod._routing_override(f"{self.tmp.name}/nope.db", self.SCOPE, "k")
-
-    def test_path_with_uri_special_chars_is_readable(self):
-        import os
-        import shutil
-
-        d = os.path.join(self.tmp.name, "a b?c#d%e")
-        os.makedirs(d)
-        dst = os.path.join(d, "state.db")
-        shutil.copy(self.db, dst)
-        self._put(self.SCOPE, "k", {"model_override": {"provider": "p", "model": "m"}})
-        shutil.copy(self.db, dst)
-        self.assertEqual(self.mod._routing_override(dst, self.SCOPE, "k"), ("p", "m"))
-
-    def test_connection_is_read_only(self):
-        import sqlite3
-
-        self._put(self.SCOPE, "k", {})
-        conn = sqlite3.connect(f"file:{self.db}?mode=ro", uri=True)
-        with self.assertRaises(sqlite3.OperationalError):
-            conn.execute("DELETE FROM gateway_routing")
-        conn.close()
-
-    def test_session_key_selects_row_and_unset_key_falls_back(self):
-        import os
-        from unittest import mock
-
-        self._put(self.SCOPE, "k1", {"model_override": {"provider": "mistral", "model": "m"}})
-        fake_gsc = types.ModuleType("gateway.session_context")
-        fake_gsc.get_session_env = lambda name, default="": os.environ.get(name, default)
-        fake_hc = types.ModuleType("hermes_constants")
-        home = Path(self.tmp.name)
-        (home / "sessions").mkdir()
-        fake_hc.get_hermes_home = lambda: home
-        scope = str((home / "sessions").resolve())
-        self._put(scope, "k1", {"model_override": {"provider": "hostyourai", "model": "hyai/auto"}})
-        mods = {
-            "gateway": types.ModuleType("gateway"),
-            "gateway.session_context": fake_gsc,
-            "hermes_constants": fake_hc,
-        }
-        with mock.patch.dict(sys.modules, mods), mock.patch.dict(os.environ, {"HERMES_SESSION_KEY": "k1"}):
-            self.assertEqual(self.mod._session_route(), ("hostyourai", "hyai/auto"))
-        with mock.patch.dict(sys.modules, mods), mock.patch.dict(os.environ, {}, clear=False):
-            os.environ.pop("HERMES_SESSION_KEY", None)
-            self.assertEqual(self.mod._session_route(), ("", ""))
-
-    def test_bound_key_with_no_row_raises_lookup_error_from_real_db(self):
-        # SPEC R12, end-to-end: a real session key bound against a real (empty) state.db
-        # with no matching row. _session_route must raise LookupError (not return ("","")),
-        # and _active_model must recover it to the config default rather than "unknown".
-        import os
-        from unittest import mock
-
-        fake_gsc = types.ModuleType("gateway.session_context")
-        fake_gsc.get_session_env = lambda name, default="": os.environ.get(name, default)
-        fake_hc = types.ModuleType("hermes_constants")
-        home = Path(self.tmp.name)
-        (home / "sessions").mkdir(exist_ok=True)
-        fake_hc.get_hermes_home = lambda: home
-        mods = {
-            "gateway": types.ModuleType("gateway"),
-            "gateway.session_context": fake_gsc,
-            "hermes_constants": fake_hc,
-        }
-        with (
-            mock.patch.dict(sys.modules, mods),
-            mock.patch.dict(os.environ, {"HERMES_SESSION_KEY": "no-such-row"}),
-        ):
-            with self.assertRaises(LookupError):
-                self.mod._session_route()
-            self.mod._config_route = lambda: ("hostyourai", "hyai/auto")
-            self.assertEqual(self.mod._active_model(), ("hostyourai", "hyai/auto"))
-            self.assertIsNone(self.mod._not_applicable())
-
-    def test_config_plain_string_model_is_accepted(self):
-        import sys as _sys
-        from unittest import mock
-
-        fake = types.ModuleType("hermes_cli.config")
-        fake.load_config_readonly = lambda: {"model": "hyai/auto"}
-        with mock.patch.dict(
-            _sys.modules, {"hermes_cli": types.ModuleType("hermes_cli"), "hermes_cli.config": fake}
-        ):
-            self.assertEqual(self.mod._config_route(), ("", "hyai/auto"))
 
 
 if __name__ == "__main__":

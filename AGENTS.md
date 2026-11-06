@@ -12,12 +12,10 @@ Standalone, unofficial Hermes Agent plugin pack (NOT upstream): a `hostyourai` p
 
 ## Invariants (do not break)
 - **Cache-safe.** Only per-request `extra_body`/`extra_headers` vary. Never mutate the system prompt, toolsets or past context. No core changes; plugins never touch Hermes core files.
-- **Request gate is strict equality** `model == "hyai/auto"` in the provider. That is the real safeguard; the `/hyai` command gate is UX only.
+- **Request gate is strict equality** `model == "hyai/auto"` in the provider. That is the only safeguard; `/hyai` no longer gates on model at all.
 - **No speculative code** for Hermes APIs that have not shipped (e.g. a picker hook). Propose upstream instead.
 - **Transport is never mentioned** in `/hyai` output, help or README. It is config-only; `/hyai off` must preserve a hand-set value.
-- **Config default is not the active model.** The truth is the chat's `/model` choice. The command gate reads the persisted override from `state.db` table `gateway_routing` (`scope` + `session_key` from `HERMES_SESSION_KEY`, read-only `mode=ro` connection, URI-quoted path), and fails closed on a genuine error (refuse). A session key with no row at all (a local/TUI/
-  dashboard session that never set `/model`) is not an error — it reads the config default,
-  same as a CLI session with no key. `HERMES_SESSION_ID` is NOT set for plugin handlers. `/model --once` is memory-only and invisible; documented limit.
+- **`/hyai` reads no Hermes internal state.** It no longer checks the chat's active model before accepting a task/policy change (previously read the persisted `/model` override from `state.db` table `gateway_routing`; that read is gone). The setting is always accepted; it has no effect unless the chat is actually on `hyai/auto`, enforced solely by the provider's strict equality check above. Scope note: this change applies only to the `/hyai` routing-hint command (task/policy/off/clear), not to the `hostyourai` provider profile, `/hyai usage`, or any other part of the plugin.
 - **Telegram menu:** a plugin command's `args_hint` must not start with `<`, or Hermes hides it from the menu.
 - Hermes reads state via its own paths: use `get_hermes_home()`, never hardcode `~/.hermes`.
 
@@ -52,8 +50,8 @@ Standalone, unofficial Hermes Agent plugin pack (NOT upstream): a `hostyourai` p
 - Goal: listable in NousResearch/hermes-agent `plugin-catalog/` (one YAML per plugin, human-reviewed, full-SHA pin). Do not open that PR or make the repo public without Emil's say-so.
 - `plugin.yaml` is manifest v2: `requires_hermes: ">=0.21.7"` (SemVer floor, never CalVer; 0.21.7 is the first release with `argument_mode`, which `/hyai` uses). Raise the floor only after finding the first release shipping a newly used API (compare tags' source).
 - `plugin.yaml` `version` must equal the pack version and the tag; the pinned commit must carry it (tests enforce from 0.1.7).
-- README must keep the disclosure section accurate: network target, credential path, `config.yaml` write, read-only `state.db` read, no telemetry, no self-update. Update it whenever behavior changes (catalog rule 13: undisclosed behavior = changes requested).
-- Known review risk: reading `state.db` `gateway_routing` (private schema) and the underscore-private `_plugin_settings_entry`. Proper fix is an upstream hook-request issue ("pass selected provider/model to command handlers"); until then fail closed and keep it documented. No monkeypatching, no core overrides.
+- README must keep the disclosure section accurate: network target, credential path, `config.yaml` write, no telemetry, no self-update. Update it whenever behavior changes (catalog rule 13: undisclosed behavior = changes requested).
+- Resolved: `/hyai` no longer reads `state.db`/`gateway_routing` or the underscore-private `_plugin_settings_entry` — that was the prior known review risk (command gate dropped; see Invariants). No remaining private-schema read in this plugin pack.
 - Plan and decision log: Obsidian `wiki/homelab/hyai-hermes-plugin-plan.md` (not in this repo).
 
 ## CI and release notes

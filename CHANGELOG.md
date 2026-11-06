@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+- Fix: `/hyai` (the hyai/auto routing-hint feature — `/hyai task|policy|off|clear`) no longer
+  reads Hermes's private `state.db`/`gateway_routing` table to check the chat's current model
+  before accepting a change. The setting is now always accepted. This behavior change is
+  scoped only to `/hyai`'s task/policy routing hint; it does not affect the `hostyourai`
+  provider profile, `/hyai usage` reporting, or any other part of the plugin suite — the real
+  and only gate on hyai/auto (the provider profile's strict `model == "hyai/auto"` check at
+  request time) is unchanged. Users who are not on `hyai/auto` no longer see a "not
+  applicable"/"only apply to hostyourai hyai/auto" warning when changing the setting; it is
+  simply silently inert until they switch to `hyai/auto`.
+
 ## 0.3.2
 - Docs: `/hyai task auto` is flagged **Experimental** in the README (own
   subsection with a gentle "treat it as an experiment" note) and in the

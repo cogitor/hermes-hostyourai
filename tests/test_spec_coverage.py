@@ -14,8 +14,6 @@ from test_hyai_router import FakeCtx, _load_module
 from test_hyai_usage import BALANCE, FAKE_KEY, UsageTestCase, ok
 
 ROOT = Path(__file__).resolve().parent.parent
-OTHER_MODEL = ("mistral", "mistral-small-latest")
-HYAI_AUTO = ("hostyourai", "hyai/auto")
 
 
 class SpecCoverage(unittest.TestCase):
@@ -29,8 +27,6 @@ class SpecCoverage(unittest.TestCase):
 class RoutingSpec(unittest.TestCase):
     def setUp(self):
         self.mod = _load_module()
-        self.model = HYAI_AUTO
-        self.mod._active_model = lambda: self.model
         self.ctx = FakeCtx()
         self.mod.register(self.ctx)
         self.call = self.ctx.handler
@@ -40,36 +36,15 @@ class RoutingSpec(unittest.TestCase):
 
     def test_R1_bare_command_shows_setting_and_choices_on_any_model(self):
         self.call("task code")
-        for model in (HYAI_AUTO, OTHER_MODEL):
-            self.model = model
-            out = self.call("")
-            self.assertIn("task=code", out)
-            self.assertIn("policy:", out)  # the list of choices
+        out = self.call("")
+        self.assertIn("task=code", out)
+        self.assertIn("policy:", out)  # the list of choices
 
     def test_R2_status_shows_the_setting_without_the_choices_on_any_model(self):
         self.call("task code")
-        for model in (HYAI_AUTO, OTHER_MODEL):
-            self.model = model
-            out = self.call("status")
-            self.assertIn("task=code", out)
-            self.assertNotIn("shorthand", out)
-
-    def test_R3_other_models_get_a_note_on_read_and_hyai_auto_does_not(self):
-        for args in ("", "status"):
-            self.model = HYAI_AUTO
-            self.assertNotIn("only apply", self.call(args))
-            self.model = OTHER_MODEL
-            self.assertIn("only apply to hostyourai hyai/auto", self.call(args))
-
-    def test_R12_local_session_with_no_routing_row_resolves_via_config(self):
-        # A local/TUI/dashboard session with a session key but no gateway_routing row
-        # reads the config default instead of "unknown". Exercised via the real
-        # _active_model/_session_route path, not a stub.
-        mod = _load_module()
-        mod._session_route = lambda: (_ for _ in ()).throw(LookupError("no row"))
-        mod._config_route = lambda: HYAI_AUTO
-        self.assertEqual(mod._active_model(), HYAI_AUTO)
-        self.assertIsNone(mod._not_applicable())
+        out = self.call("status")
+        self.assertIn("task=code", out)
+        self.assertNotIn("shorthand", out)
 
     def test_R4_single_value_is_saved_lowercased_and_keeps_the_other(self):
         self.call("task CODE")
@@ -104,14 +79,6 @@ class RoutingSpec(unittest.TestCase):
             self.call(word)
             self.assertEqual(self.saved(), {"transport": "headers"})
 
-    def test_R7_changes_are_refused_off_hyai_auto_and_when_the_model_is_unknown(self):
-        for model in (OTHER_MODEL, ("", ""), ("hostyourai", "hyai/fast"), ("other", "hyai/auto")):
-            self.model = model
-            for args in ("task code", "policy cost", "code cost", "off", "clear"):
-                with self.subTest(model=model, args=args):
-                    self.assertIn("only apply", self.call(args))
-                    self.assertEqual(self.saved(), {})
-
     def test_R8_unknown_subcommand_shows_usage_and_changes_nothing(self):
         self.call("task code")
         for args in ("banana", "TASK", "usage2", "💥", "x" * 5000):
@@ -120,16 +87,12 @@ class RoutingSpec(unittest.TestCase):
                 self.assertEqual(self.saved(), {"task": "code"})
 
     def test_R9_help_shows_usage_on_any_model(self):
-        for model in (HYAI_AUTO, OTHER_MODEL, ("", "")):
-            self.model = model
-            self.assertEqual(self.call("help"), self.mod._USAGE)
+        self.assertEqual(self.call("help"), self.mod._USAGE)
 
     def test_R10_no_reply_mentions_transport(self):
         self.ctx._store[self.mod.CONFIG_KEY] = {"transport": "headers"}
-        for model in (HYAI_AUTO, OTHER_MODEL):
-            self.model = model
-            for args in ("", "status", "help", "off", "task code", "cost", "banana", "transport headers"):
-                self.assertNotIn("transport", self.call(args).lower())
+        for args in ("", "status", "help", "off", "task code", "cost", "banana", "transport headers"):
+            self.assertNotIn("transport", self.call(args).lower())
 
     def test_R11_saved_setting_is_sent_only_to_hyai_auto(self):
         from test_hostyourai_provider import _entry
@@ -148,10 +111,8 @@ class RoutingSpec(unittest.TestCase):
 class UsageSpec(UsageTestCase):
     def test_U1_works_on_any_model_and_never_changes_the_setting(self):
         self.ctx._store[self.mod.CONFIG_KEY] = {"task": "code"}
-        for model in (HYAI_AUTO, OTHER_MODEL, ("", "")):
-            self.mod._active_model = lambda model=model: model
-            self.mod._cache = None
-            self.assertIn("Balance:", self.call("usage"))
+        self.mod._cache = None
+        self.assertIn("Balance:", self.call("usage"))
         self.assertEqual(self.ctx.get_config(self.mod.CONFIG_KEY, {}), {"task": "code"})
 
     def test_U2_shows_balance_spend_top_up_and_local_time_in_euro(self):

@@ -3,29 +3,26 @@
 What `/hyai` must do. Every rule has an ID; `tests/test_spec_coverage.py` fails if a rule ID is
 not mentioned in a test. Name the ID in the test's docstring or comment.
 
-"On hyai/auto" means the chat's selected model is `hyai/auto` on the `hostyourai` provider
-(or a provider that was not recorded). Anything else, or a model that cannot be determined,
-is "not on hyai/auto".
+`/hyai` never reads the chat's currently selected model; every subcommand always applies.
+Whether the saved setting actually does anything is decided solely by the `hostyourai`
+provider profile at request time (see R11): the setting is silently inert on any model other
+than hyai/auto.
 
 ## Routing setting
 
 - **R1** `/hyai` shows the saved task and policy, then the list of choices. Works on any model.
 - **R2** `/hyai status` shows the saved task and policy only. Works on any model.
-- **R3** When not on hyai/auto, R1 and R2 add one line saying hints only apply to hyai/auto.
 - **R4** `/hyai task <value>` and `/hyai policy <value>` save one value, lowercased, and keep
   the other. Values come from the fixed lists; anything else saves nothing and shows usage.
 - **R5** Shorthand `/hyai <word> [<word>]`: task and policy words in any order. At most one of
   each. Words are the exact task and policy values (no aliases). Any
   unknown word, or two of the same kind, saves nothing and shows usage.
 - **R6** `/hyai off` and `/hyai clear` remove task and policy. A hand-set `transport` stays.
-- **R7** R4, R5 and R6 only work on hyai/auto. Elsewhere they change nothing and say why.
-- **R8** An unknown subcommand shows usage (on hyai/auto) and never changes the setting.
+- **R8** An unknown subcommand shows usage and never changes the setting.
 - **R9** `/hyai help` shows usage. Works on any model.
 - **R10** The word "transport" never appears in any reply.
 - **R11** The saved setting is sent only to hyai/auto, by the provider profile (strict match).
-- **R12** A local surface (CLI, TUI, desktop, or the Hermes dashboard) with no recorded `/model`
-  override reads its effective model from the config default, so it stays determinable instead
-  of reading as "unknown".
+  This is the only gate on hyai/auto in the whole plugin; `/hyai` itself has none.
 
 ## Usage (`/hyai usage`)
 
@@ -60,8 +57,8 @@ user message (its `user_message` is the original text) and does the classifying.
 `llm_request` middleware adds the result to each model call of that message, in
 `extra_body`/`extra_headers` only. A failure in either leaves the request unchanged.
 
-- **A1** `/hyai task auto` saves `auto` as the task. Only on hyai/auto (as R7). It is off until the
-  user sets it. `/hyai off` clears it, and so does any other task value.
+- **A1** `/hyai task auto` saves `auto` as the task like any other task value (R4). It is off
+  until the user sets it. `/hyai off` clears it, and so does any other task value.
 - **A2** The hint is added only when the saved task is `auto` and the model is hyai/auto. The
   policy is sent as usual.
 - **A3** The classifier runs once per user message, in `pre_llm_call`. The result is kept under the

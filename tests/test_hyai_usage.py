@@ -117,10 +117,6 @@ class UsageReplyTests(UsageTestCase):
         self.assertIn("private chat", self.call("usage"))
         self.assertEqual(self.requests, 0)
 
-    def test_works_when_the_chat_model_is_not_hyai_auto(self):
-        self.mod._active_model = lambda: ("mistral", "mistral-small-latest")
-        self.assertIn("Balance: €12.34", self.call("usage"))
-
     def test_unlimited_account_is_never_low(self):
         self.response = ok({"balance": 0, "spend_month": 1, "unlimited": True})
         reply = self.call("usage")
@@ -314,8 +310,6 @@ class HttpLayerTests(unittest.TestCase):
 class ShorthandTests(unittest.TestCase):
     def setUp(self):
         self.mod = _load_module()
-        self.model = ("hostyourai", "hyai/auto")
-        self.mod._active_model = lambda: self.model
         self.ctx = FakeCtx()
         self.mod.register(self.ctx)
 
@@ -353,13 +347,6 @@ class ShorthandTests(unittest.TestCase):
         self.ctx._store[self.mod.CONFIG_KEY] = {"transport": "headers"}
         self.call("cost")
         self.assertEqual(self.saved(), {"transport": "headers", "policy": "cost"})
-
-    def test_other_models_are_not_touched(self):
-        self.model = ("mistral", "mistral-small-latest")
-        for args in ("code cost", "task code", "policy cost", "off"):
-            with self.subTest(args=args):
-                self.assertIn("only apply", self.call(args))
-        self.assertEqual(self.saved(), {})
 
     def test_help_prints_the_usage_text(self):
         self.assertEqual(self.call("help"), self.mod._USAGE)

@@ -2,7 +2,9 @@
 
 The task/policy choice is saved in this plugin's config (``CONFIG_KEY``). The companion
 ``hostyourai`` provider profile reads it on every request, so it applies to every chat on the
-profile. ``status`` and ``usage`` work on any model; changing the routing only applies to ``hyai/auto``.
+profile. The setting is always accepted regardless of the chat's current model; it has no
+effect unless that chat is actually on ``hyai/auto`` — the provider profile is the real and
+only gate (checked at request time, not here).
 
     /hyai                      show current task/policy
     /hyai status               same as above
@@ -62,95 +64,12 @@ def _format_status(state: dict) -> str:
         return "HostYourAI routing: not set (hyai/auto decides per request)"
     text = (
         f"HostYourAI routing: task={state.get('task') or '(unset)'} policy={state.get('policy') or '(unset)'}"
-        " (applies to every chat on this Hermes profile)"
+        " (applies to every chat on this Hermes profile; only hyai/auto requests use it)"
     )
     if state.get("task") == AUTO_TASK and _last_auto:
         task, fallback = _last_auto
         text += f"\nAuto: last message got {task}" + (" (fallback)" if fallback else "")
     return text
-
-
-def _config_route() -> tuple[str, str]:
-    """Configured main (provider, model): only the fallback for a chat with no /model override."""
-    from hermes_cli.config import load_config_readonly
-
-    model = (load_config_readonly() or {}).get("model")
-    if isinstance(model, str):  # legacy plain-string form
-        return "", model
-    if not isinstance(model, dict):
-        return "", ""
-    return str(model.get("provider") or ""), str(model.get("default") or "")
-
-
-def _routing_override(db_path, scope: str, session_key: str) -> tuple[str, str]:
-    """(provider, model) of the chat's persisted /model override, read straight from state.db.
-
-    Read-only, short-lived connection (no schema init/migration, no contention with the gateway's
-    writer). Rows are keyed (scope, session_key); scope is the gateway's resolved sessions dir, so
-    another profile's row for the same key can never match.
-    """
-    import json
-    import sqlite3
-    from urllib.parse import quote
-
-    conn = sqlite3.connect(f"file:{quote(str(db_path))}?mode=ro", uri=True, timeout=2)
-    try:
-        row = conn.execute(
-            "SELECT entry_json FROM gateway_routing WHERE scope = ? AND session_key = ?",
-            (scope, session_key),
-        ).fetchone()
-    finally:
-        conn.close()
-    if not row:
-        # Every chat that has messaged the gateway has a routing row. A missing one means our
-        # scope guess is wrong (e.g. a custom gateway.sessions_dir): refuse, don't guess.
-        raise LookupError(f"no routing row for session {session_key!r} in scope {scope!r}")
-    override = json.loads(row[0]).get("model_override") or {}
-    return str(override.get("provider") or ""), str(override.get("model") or "")
-
-
-def _session_route() -> tuple[str, str]:
-    """(provider, model) from this chat's persisted /model override; ("", "") if none.
-
-    The gateway stores every /model switch on the chat's routing entry and binds
-    HERMES_SESSION_KEY while a plugin command runs, so this is the user's real selection, not
-    the config default. A one-turn /model --once override is memory-only and not visible here.
-    """
-    from gateway.session_context import get_session_env
-    from hermes_constants import get_hermes_home
-
-    session_key = get_session_env("HERMES_SESSION_KEY")
-    if not session_key:
-        return "", ""
-    home = get_hermes_home()
-    return _routing_override(home / "state.db", str((home / "sessions").resolve()), session_key)
-
-
-def _active_model() -> tuple[str, str]:
-    """(provider, model) in effect for this chat; ("", "") if undeterminable (fails closed)."""
-    try:
-        provider, model = _session_route()
-        if not model:
-            return _config_route()
-        return provider, model
-    except LookupError:
-        # A session key exists but has no routing row: a local/TUI/dashboard session that
-        # hasn't persisted a /model override. The config default is what's actually in
-        # effect (same as a CLI/empty-session reading it) — fall back to it rather than
-        # reporting the model as undeterminable.
-        return _config_route()
-    except Exception as exc:
-        logger.debug("hyai: could not determine active model, refusing: %r", exc)
-        return "", ""
-
-
-def _not_applicable() -> str | None:
-    provider, model = _active_model()
-    # An unrecorded provider is fine: the model id hyai/auto is itself HostYourAI-specific.
-    if model == "hyai/auto" and provider in ("", "hostyourai"):
-        return None
-    shown = "/".join(x for x in (provider, model) if x) or "unknown"
-    return f"Routing hints only apply to hostyourai hyai/auto. Current model: {shown}. Nothing changed."
 
 
 def _private_chat() -> bool:
@@ -500,25 +419,22 @@ def register(ctx) -> None:
     def _handle_hyai(raw_args: str):
         parts = (raw_args or "").split()
         first = parts[0].lower() if parts else ""
-        # usage is about the account, not routing, so it skips the hyai/auto gate (it has its own).
+        # usage is about the account, not routing, so it has its own private-chat gate.
         if first == "usage":
             return _report_usage(ctx)
         if first == "help":
             return _USAGE
         state = dict(_saved_state(ctx))
 
-        # Reading the setting works on any model; only changing it needs hyai/auto.
+        # /hyai no longer checks the chat's active model before reading or writing the
+        # setting (it used to read it out of Hermes's private state.db). Nothing here is
+        # gated on the model any more: the setting is always accepted, and takes effect
+        # only when the chat is actually on hyai/auto — that check lives solely in the
+        # hostyourai provider profile, at request time.
         if not parts or first == "status":
             status = _format_status(state)
-            note = _not_applicable()
-            if note:
-                status += f"\n{note}"
             # No picker exists on text surfaces (Telegram), so bare /hyai also lists the choices.
             return status if parts else f"{status}\n\n{_USAGE}"
-
-        blocked = _not_applicable()
-        if blocked:
-            return blocked
 
         if first in ("off", "clear"):
             # Keep any hand-set provider option (e.g. transport); only clear task/policy.

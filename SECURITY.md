@@ -20,6 +20,11 @@ Hermes version.
 - Its only network call is `GET /balance` on `https://hostyourai.com/api/v1`,
   made when you run `/hyai usage`. It refuses to run in group chats. No other
   host is contacted.
-- It reads Hermes's `state.db` read-only (to find the chat's model).
+- `/hyai` reads no Hermes internal state of its own: it always accepts a
+  task/policy change, regardless of the chat's current model. This affects
+  only the `/hyai` command (the hyai/auto routing-hint feature); whether the
+  setting has any effect is still decided solely by the `hostyourai` provider
+  profile when building a request (the strict `hyai/auto` check above), not by
+  `/hyai`.
 
 See "What it sends" and "Known limits" in the README for details.
