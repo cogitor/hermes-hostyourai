@@ -25,7 +25,10 @@ grep -q "badge/version-v$VER-blue" README.md || { echo "release: README version 
 git add hostyourai/plugin.yaml README.md
 # --no-verify: the pack still names the old version here, so the version-sync tests cannot pass yet.
 # The full gate runs on the pin commit below, when everything is consistent.
-git commit -q --no-verify -m "release: v$VER" || { git restore --staged --worktree .; echo "release: release commit failed" >&2; exit 1; }
+# --allow-empty: plugin.yaml/README may already carry $VER (e.g. set during an earlier restructure
+# commit), in which case there is nothing new to stage; still make a release commit so BASE/SHA
+# below are well-defined.
+git commit -q --no-verify --allow-empty -m "release: v$VER" || { git restore --staged --worktree .; echo "release: release commit failed" >&2; exit 1; }
 BASE="$(git rev-parse HEAD~1)"
 SHA="$(git rev-parse HEAD)"
 # Every rollback below resets to BASE, the commit this release started from.
