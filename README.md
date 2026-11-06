@@ -33,6 +33,39 @@ One plugin, `hostyourai`:
   (classify/score/route judgments) directly from your own agent tasks, not just
   through this plugin's `/hyai` command.
 
+## Using the `hyai-decide` skill
+
+Any agent task running under this plugin can call HostYourAI's typed decision
+API directly, without going through `/hyai` or a chat model at all — useful
+for classify/score/route judgments inside your own scripts or other skills.
+
+```python
+from hostyourai.decision_client import DecisionClient
+
+client = DecisionClient()  # reads HOSTYOURAI_API_KEY from the environment
+result = client.ask(
+    "classify",
+    prompt="Is this support ticket urgent?",
+    choices=["urgent", "normal", "low"],
+)
+print(result.choice, client.confidence_of(result))
+```
+
+Needs `HOSTYOURAI_API_KEY` in the environment (same key as the plugin). See
+[`hostyourai/skills/hyai-decide/SKILL.md`](hostyourai/skills/hyai-decide/SKILL.md)
+for the full contract (ask/confidence_of, retries, timeouts) and when an
+agent should reach for it.
+
+The skill ships its own eval set
+(`hostyourai/skills/hyai-decide/evals/{prompts,rubric}.yaml`). Run it against
+a live model with:
+
+```bash
+python3 scripts/run_skill_eval.py \
+  --skill-path hostyourai/skills/hyai-decide \
+  --model hyai/auto --provider hostyourai
+```
+
 ## Requirements
 
 - Hermes Agent 0.21.7 or newer
@@ -109,6 +142,10 @@ off again. `/hyai` shows what the last message got.
   characters of your message and of your message before it, nothing else: no
   replies, tool output or files. Those texts are never written to logs, and the
   request never follows a redirect.
+- The `hyai-decide` skill, when an agent task calls it, sends one request per
+  call to `https://hostyourai.com/api/decision/v1/systemone` with your key,
+  your prompt and your choices — only what the calling task explicitly passes
+  in. Nothing is sent unless a task calls it.
 - `/hyai usage` makes one request that only reads your balance to the same address
   with your key, only when you run it, never in a group chat, and it never
   follows a redirect. The result is kept in memory for a minute, not saved.

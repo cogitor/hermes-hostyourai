@@ -26,12 +26,19 @@ Private repo `cogitor/hermes-hostyourai`.
 - The repo is pushed to GitHub. Never commit real chat/user IDs, phone numbers, emails (other than the author identity in git metadata), API keys, `/home/<name>` paths, config, databases, sessions or backups. Test fixtures must be invented values. `scripts/scan_secrets.py` enforces generic shapes; `.gitignore` blocks data files. Mark a deliberate fake with `# scan: allow`.
 - Never copy real `state.db`/config into tests; build empty temp databases with the real schema.
 - Git author for every commit and tag: `Emil Varga <emil.varga@gmail.com>` (GitHub `cogitor`). `release.sh` refuses any other identity. Never rewrite published history without being asked. <!-- scan: allow -->
+- `scripts/run_skill_eval.py` needs `HOSTYOURAI_API_KEY` (or whichever env var the target provider uses) already exported in the shell — it never reads, prints or stores the key itself, only passes the environment through to `hermes chat`. Never pass a key on the command line or write eval transcripts into the repo; keep ad-hoc eval runs and their transcripts out of version control (scratch dir only).
 
 ## Testing rules
 - `SPEC.md` defines the `/hyai` behaviour as numbered rules (R*, U*). Change behaviour: edit the spec first, then add a `test_<ID>_...` in `tests/test_spec_coverage.py`; a meta-test fails if a rule has no test.
 - Test behavior and relationships, not frozen values (no change-detector tests). Exercise the real SQL/JSON path against a temp db, not lambdas that replace it.
 - Mock Hermes with `sys.modules` fakes (see `tests/test_hostyourai_provider.py`, `tests/test_hyai_user_journeys.py`); no real Hermes install is needed.
 - Any change to the gate, provider hooks or release tooling needs an independent review pass before pushing, and a full gate run.
+
+## Bundled skills (`hostyourai/skills/`)
+- Each bundled skill is self-contained: its own `SKILL.md`, registered via `register_skill` in `hostyourai/__init__.py` (safe no-op if the host Hermes's `ctx` predates that API — never required for the plugin itself to work).
+- Static coverage lives in `tests/test_hyai_decide_skill.py`-style tests: frontmatter shape, registration wiring, and SKILL.md claims matching the real code (e.g. method names, env var names) — these run in `scripts/check.sh` like any other test.
+- Behavioral/live coverage is data, not code: `hostyourai/skills/<skill>/evals/prompts.yaml` + `evals/rubric.yaml`, run with `scripts/run_skill_eval.py --skill-path hostyourai/skills/<skill> --model <model> --provider <provider>` against a real Hermes session (`hermes chat -q`). This needs a live API key and a real model call — it is **not** part of `scripts/check.sh` or CI; run it by hand before changing a skill's trigger/behavior claims, and whenever bumping the model used to validate it.
+- A skill that calls out to HostYourAI (e.g. `hyai-decide` → `decision_client.py`) is itself a disclosed network surface — see Privacy and safety above and keep the README "What it sends and changes" section in sync.
 
 ## Auto task mode (how it was built)
 - `/hyai task auto` = a `pre_llm_call` hook classifies once per user message (HostYourAI System One,
