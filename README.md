@@ -31,13 +31,29 @@ One plugin, `hostyourai`:
   "this is code, optimise for speed".
 - **A bundled `hyai-decide` skill** for calling HostYourAI's typed decision API
   (classify/score/route judgments) directly from your own agent tasks, not just
-  through this plugin's `/hyai` command.
+  through this plugin's `/hyai` command. Off by default — see below.
 
 ## Using the `hyai-decide` skill
 
-Any agent task running under this plugin can call HostYourAI's typed decision
-API directly, without going through `/hyai` or a chat model at all — useful
-for classify/score/route judgments inside your own scripts or other skills.
+> ⚠️ **This is an experiment, treat it as such.** It is off by default and
+> must be explicitly enabled. Treat it as a taste of what a cheap, typed
+> decision call alongside a chat model could look like — not as something to
+> rely on. It may change or disappear in a later version.
+
+Enable it:
+
+```bash
+hermes config set plugins.entries.hostyourai.settings.hyai_decide_enabled true
+```
+
+Disable it again the same way (`... hyai_decide_enabled false`), or just disable
+the whole plugin (`hermes plugins disable hostyourai`) if you don't want any of
+it. Either way takes effect the next time the plugin loads (new session).
+
+Once enabled, any agent task running under this plugin can call HostYourAI's
+typed decision API directly, without going through `/hyai` or a chat model at
+all — useful for classify/score/route judgments inside your own scripts or
+other skills.
 
 ```python
 from hostyourai.decision_client import DecisionClient
@@ -142,10 +158,12 @@ off again. `/hyai` shows what the last message got.
   characters of your message and of your message before it, nothing else: no
   replies, tool output or files. Those texts are never written to logs, and the
   request never follows a redirect.
-- The `hyai-decide` skill, when an agent task calls it, sends one request per
-  call to `https://hostyourai.com/api/decision/v1/systemone` with your key,
+- The `hyai-decide` skill, disabled by default — enable with
+  `hermes config set plugins.entries.hostyourai.settings.hyai_decide_enabled true` —
+  sends one request per call to
+  `https://hostyourai.com/api/decision/v1/systemone` with your key,
   your prompt and your choices — only what the calling task explicitly passes
-  in. Nothing is sent unless a task calls it.
+  in. Nothing is sent unless enabled and a task calls it.
 - `/hyai usage` makes one request that only reads your balance to the same address
   with your key, only when you run it, never in a group chat, and it never
   follows a redirect. The result is kept in memory for a minute, not saved.

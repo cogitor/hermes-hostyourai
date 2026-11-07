@@ -211,9 +211,15 @@ class HyaiCommandTestCase(unittest.TestCase):
             {"hyai": {"task": "code", "policy": "speed"}},
         )
 
-    # --- bundled skills are registered via ctx.register_skill, if the host supports it ----
-    def test_bundled_skills_are_registered_with_ctx_when_supported(self):
+    # --- bundled skills are registered via ctx.register_skill, gated by config flag ----
+    def test_bundled_skills_not_registered_by_default(self):
         ctx = FakeCtx()
+        self.mod.register(ctx)
+        self.assertNotIn("hyai-decide", ctx.skills)
+
+    def test_bundled_skills_are_registered_with_ctx_when_enabled(self):
+        ctx = FakeCtx()
+        ctx.set_config("hyai_decide_enabled", True)
         self.mod.register(ctx)
         self.assertIn("hyai-decide", ctx.skills)
         self.assertTrue(str(ctx.skills["hyai-decide"]).endswith("SKILL.md"))
@@ -221,6 +227,7 @@ class HyaiCommandTestCase(unittest.TestCase):
 
     def test_skill_registration_is_skipped_gracefully_without_register_skill(self):
         ctx = OldCtxWithoutRegisterSkill()
+        ctx.set_config("hyai_decide_enabled", True)
         self.mod.register(ctx)  # must not raise
         self.assertIsNotNone(ctx.handler)
 

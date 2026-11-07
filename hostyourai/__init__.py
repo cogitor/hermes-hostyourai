@@ -28,6 +28,10 @@ no router to hint.
     /hyai code cost            shorthand: task and/or policy in any order
     /hyai off | clear          remove the override, let hyai/auto decide alone
     /hyai usage                balance and this month's spend (private chat, CLI, or dashboard only)
+
+Experimental: the bundled ``hyai-decide`` skill is off by default. Enable it with
+``hermes config set plugins.entries.hostyourai.settings.hyai_decide_enabled true``; it is
+registered (or not) once, at plugin load time.
 """
 
 from __future__ import annotations
@@ -551,7 +555,7 @@ def register(ctx) -> None:
     global _ctx
     _ctx = ctx
 
-    if hasattr(ctx, "register_skill"):
+    if hasattr(ctx, "register_skill") and ctx.get_config("hyai_decide_enabled", False):
         skills_dir = Path(__file__).parent / "skills"
         for child in sorted(skills_dir.iterdir()) if skills_dir.is_dir() else ():
             skill_md = child / "SKILL.md"
