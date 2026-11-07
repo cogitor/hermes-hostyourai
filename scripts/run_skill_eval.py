@@ -26,6 +26,7 @@ secret value itself.
 from __future__ import annotations
 
 import argparse
+import os
 import pathlib
 import subprocess
 import sys
@@ -63,6 +64,7 @@ def run_case(repo_root: pathlib.Path, prompt_text: str, model: str, provider: st
         capture_output=True,
         text=True,
         timeout=120,
+        env={**os.environ, "TERMINAL_CWD": str(repo_root)},
     )
     if proc.returncode != 0:
         detail = proc.stderr.strip() or proc.stdout.strip()

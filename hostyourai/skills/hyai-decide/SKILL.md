@@ -1,6 +1,6 @@
 ---
 name: hyai-decide
-description: "Use when a bounded classify/score/route judgment is cheaper than a full reasoning turn — call HostYourAI's typed decision model instead."
+description: "Use when a task needs a cheap, bounded classify/score/yes-no judgment — tagging items, rating severity/priority, routing/gating, or batch-labeling many things fast — instead of a full reasoning turn. Triggers on requests like 'tag/categorize these', 'cheapest way to classify/sort a batch', 'is this urgent/severe', 'should this go to review'."
 version: 0.1.0
 platforms: [linux]
 ---
@@ -17,13 +17,19 @@ the bounded, repeatable sliver of a pipeline — not the judgment-call part.
 ## When to use this skill
 
 - **Classify**: assign one label out of a fixed, named set (e.g. task type, topic,
-  priority tier).
+  priority tier). Includes bulk/batch tagging — "tag these 50 tickets", "sort this
+  batch of postings into categories", "cheapest way to label a pile of X".
 - **Score**: rate something on an ordered scale (e.g. severity 0-3, relevance low/
-  medium/high).
+  medium/high, "how urgent/critical is this").
 - **Route / gate (yes-no)**: a single binary question that decides which branch a
-  pipeline takes next (e.g. "does this need a human review?") — called `noul` in the API.
+  pipeline takes next (e.g. "does this need a human review?", "should this escalate?") —
+  called `noul` in the API.
 - **Verify**: check one well-defined property of a candidate answer before trusting it
   (e.g. "does this summary contradict the source text?").
+
+If a request mentions tagging, categorizing, scoring, rating, or routing many items
+cheaply/quickly/in bulk — even without the words "classify" or "decision model" — that's
+this skill, not a from-scratch reasoning pass over each item.
 
 Each needs criteria you can write down before seeing the specific input.
 
