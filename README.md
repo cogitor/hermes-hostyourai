@@ -33,64 +33,11 @@ One plugin, `hostyourai`:
   (classify/score/route judgments) directly from your own agent tasks, not just
   through this plugin's `/hyai` command. Off by default — see below.
 
-## Using the `hyai-decide` skill
-
-> ⚠️ **This is an experiment, treat it as such.** It is off by default and
-> must be explicitly enabled. Treat it as a taste of what a cheap, typed
-> decision call alongside a chat model could look like — not as something to
-> rely on. It may change or disappear in a later version.
-
-Enable it:
-
-```bash
-hermes config set plugins.entries.hostyourai.settings.hyai_decide_enabled true
-```
-
-Disable it again the same way (`... hyai_decide_enabled false`), or just disable
-the whole plugin (`hermes plugins disable hostyourai`) if you don't want any of
-it. Either way takes effect the next time the plugin loads (new session).
-
-Once enabled, any agent task running under this plugin can call HostYourAI's
-typed decision API directly, without going through `/hyai` or a chat model at
-all — useful for classify/score/route judgments inside your own scripts or
-other skills.
-
-```python
-from hostyourai.decision_client import ask, confidence_of
-
-answers = ask(
-    questions={
-        "urgency": {
-            "type": "choice",
-            "instructions": "How urgent is this support ticket?",
-            "choices": ["urgent", "normal", "low"],
-        }
-    },
-    state={"ticket_text": "..."},  # named fields only, see SKILL.md's minimization rule
-)
-print(answers["urgency"]["choice"], confidence_of(answers["urgency"]))
-```
-
-Needs `HOSTYOURAI_API_KEY` in the environment (same key as the plugin). The decision
-model defaults to `hyai/decider-2b`; set `HOSTYOURAI_DECISION_MODEL` in the
-environment to point it at a different model without a code change — see
-[`hostyourai/skills/hyai-decide/SKILL.md`](hostyourai/skills/hyai-decide/SKILL.md)
-for the full contract (ask/confidence_of, retries, timeouts) and when an
-agent should reach for it.
-
-The skill ships its own eval set
-(`hostyourai/skills/hyai-decide/evals/{prompts,rubric}.yaml`). Run it against
-a live model with:
-
-```bash
-python3 scripts/run_skill_eval.py \
-  --skill-path hostyourai/skills/hyai-decide \
-  --model hyai/auto --provider hostyourai
-```
-
 ## Requirements
 
-- Hermes Agent 0.21.7 or newer
+- [Hermes Agent](https://github.com/NousResearch/hermes-agent) 0.21.7 or newer
+  — see its [install instructions](https://github.com/NousResearch/hermes-agent#installation)
+  if you don't have it yet.
 - A HostYourAI account and API key
 
 ## Install
@@ -153,6 +100,64 @@ off again. `/hyai` shows what the last message got.
   again.
 - Settings are in `config.yaml` under `hyai_auto`: `model`, `threshold`,
   `timeout_ms` (default 1000) and `min_chars`.
+
+## Using the `hyai-decide` skill
+
+> ⚠️ **This is an experiment, treat it as such.** It is off by default and
+> must be explicitly enabled. Treat it as a taste of what a cheap, typed
+> decision call alongside a chat model could look like — not as something to
+> rely on. It may change or disappear in a later version.
+
+Enable it:
+
+```bash
+hermes config set plugins.entries.hostyourai.settings.hyai_decide_enabled true
+```
+
+Disable it again the same way (`... hyai_decide_enabled false`), or just disable
+the whole plugin (`hermes plugins disable hostyourai`) if you don't want any of
+it. Either way takes effect the next time the plugin loads (new session).
+
+Once enabled, any agent task running under this plugin can call HostYourAI's
+typed decision API directly, without going through `/hyai` or a chat model at
+all — useful for classify/score/route judgments inside your own scripts or
+other skills. Needs `HOSTYOURAI_API_KEY` in the environment (same key as the
+plugin).
+
+```python
+from hostyourai.decision_client import ask, confidence_of
+
+answers = ask(
+    questions={
+        "urgency": {
+            "type": "choice",
+            "instructions": "How urgent is this support ticket?",
+            "choices": ["urgent", "normal", "low"],
+        }
+    },
+    state={"ticket_text": "..."},  # named fields only, see SKILL.md's minimization rule
+)
+print(answers["urgency"]["choice"], confidence_of(answers["urgency"]))
+```
+
+The decision model defaults to `hyai/decider-2b`; set `HOSTYOURAI_DECISION_MODEL`
+in the environment to point it at a different model without a code change —
+see [`hostyourai/skills/hyai-decide/SKILL.md`](hostyourai/skills/hyai-decide/SKILL.md)
+for the full contract (ask/confidence_of, retries, timeouts) and when an
+agent should reach for it. (A Hermes "skill" is a packaged, discoverable set
+of instructions and tools an agent can load on demand — see
+[Hermes's skills docs](https://github.com/NousResearch/hermes-agent) if
+you're new to the concept.)
+
+The skill ships its own eval set
+(`hostyourai/skills/hyai-decide/evals/{prompts,rubric}.yaml`). Run it against
+a live model with:
+
+```bash
+python3 scripts/run_skill_eval.py \
+  --skill-path hostyourai/skills/hyai-decide \
+  --model hyai/auto --provider hostyourai
+```
 
 ## What it sends and changes
 
