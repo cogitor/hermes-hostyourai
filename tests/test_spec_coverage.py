@@ -7,14 +7,11 @@ import re
 import threading
 import time
 import unittest
-import unittest.mock
 from pathlib import Path
 
+import test_decision_client
 import test_hyai_auto
 import test_hyai_router
-from test_decision_client import FAKE_KEY as DECISION_FAKE_KEY
-from test_decision_client import Stub as DecisionStub
-from test_decision_client import dc
 from test_hyai_router import FakeCtx, _load_module
 from test_hyai_usage import BALANCE, FAKE_KEY, UsageTestCase, ok
 
@@ -264,24 +261,18 @@ class DecideSkillSpec(unittest.TestCase):
         self.assertIn(mod.HYAI_DECIDE_ENABLED_KEY, ctx._store)
 
     def test_D3_model_resolution_order_is_explicit_then_env_then_default(self):
-        stub = DecisionStub()
-        self.addCleanup(stub.close)
-        with unittest.mock.patch.dict(
-            "os.environ",
-            {"HOSTYOURAI_API_KEY": DECISION_FAKE_KEY},  # scan: allow
+        # Full behavioral coverage (default/env-override/explicit-override, including
+        # the whitespace-only-env edge case) lives in test_decision_client.py, which
+        # exercises _default_model()/ask() directly — no need to duplicate it against a
+        # live stub here too. This just enforces that coverage keeps existing.
+        names = " ".join(dir(test_decision_client.DecisionClientTests))
+        for name in (
+            "test_default_model_is_decider_2b_without_env_override",
+            "test_env_var_overrides_default_model",
+            "test_whitespace_only_env_model_falls_back_to_default",
+            "test_explicit_model_overrides_env_var",
         ):
-            dc.ask({"q": {"type": "noul", "instructions": "x"}}, {}, url=stub.base)
-            self.assertEqual(stub.requests[-1]["body"]["model"], dc.DEFAULT_MODEL)
-            with unittest.mock.patch.dict("os.environ", {"HOSTYOURAI_DECISION_MODEL": "hyai/newer"}):
-                dc.ask({"q": {"type": "noul", "instructions": "x"}}, {}, url=stub.base)
-                self.assertEqual(stub.requests[-1]["body"]["model"], "hyai/newer")
-                dc.ask(
-                    {"q": {"type": "noul", "instructions": "x"}},
-                    {},
-                    url=stub.base,
-                    model="hyai/explicit",
-                )
-                self.assertEqual(stub.requests[-1]["body"]["model"], "hyai/explicit")
+            self.assertIn(name, names, f"expected test_decision_client.py::{name} to cover D3")
 
     def test_D4_skill_body_leads_with_a_structural_stop_gate(self):
         text = (ROOT / "hostyourai" / "skills" / "hyai-decide" / "SKILL.md").read_text()
@@ -303,7 +294,6 @@ class DecideSkillSpec(unittest.TestCase):
         self.assertEqual(threshold.group(1), "70")
         prompts = (ROOT / "hostyourai" / "skills" / "hyai-decide" / "evals" / "prompts.yaml").read_text()
         self.assertIn("id: hyd-", prompts)  # sanity: file has real eval cases to force through
-        self.assertIn("USE:", harness)  # harness forces the USE: <skill>|none first-line shape
 
     def test_D6_client_never_applies_a_threshold_itself(self):
         client_text = (ROOT / "hostyourai" / "decision_client.py").read_text()

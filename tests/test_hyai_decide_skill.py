@@ -1,22 +1,9 @@
 """Checks for hostyourai/skills/hyai-decide/SKILL.md.
 
-Covers what a generic SKILL.md linter (e.g. the `skill-check` CLI, see NOTES below)
-won't: internal consistency between the skill's documented API surface and the real
-``decision_client`` module it teaches agents to call. Frontmatter parsing here is
-deliberately regex-based (no YAML parser is installed in this repo's runtime; see
-test_manifest_sync.py for the same convention).
-
-NOTES on external tooling (see repo task/PR notes for the full writeup):
-  - `npx skill-check check <dir> --format json` runs offline in this sandbox and
-    validates frontmatter-schema/description-length/body limits/local links against the
-    public Agent Skills spec. It flags `version:`/`platforms:` as "unknown fields"
-    against the bare spec -- expected noise, since Hermes's own skill-authoring
-    convention (see the hermes-agent-skill-authoring skill) requires both fields; this
-    is not a real defect in hyai-decide. No local config suppresses that rule, so this
-    is a documented false-positive rather than a cleared one.
-  - No tool found that executes a SKILL.md against a live/test model to check it is
-    *followed* correctly (a behavioral harness) -- see the report delivered alongside
-    this file for what would be needed to build one.
+Covers what a generic SKILL.md linter won't: internal consistency between the skill's
+documented API surface and the real ``decision_client`` module it teaches agents to call.
+Frontmatter parsing here is deliberately regex-based (no YAML parser is installed in this
+repo's runtime; see test_manifest_sync.py for the same convention).
 """
 
 from __future__ import annotations

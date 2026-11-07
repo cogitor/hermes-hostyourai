@@ -108,7 +108,7 @@ Regardless of vendor trust level, apply this **minimization rule** to every call
 
 Question IDs (the keys of the `questions` dict) are never sent to the model — all
 meaning the model needs must be in `instructions`/`criteria`, not implied by the ID.
-Probe with one minimal real call before trusting any shape above — vendor APIs drift.
+Probe with one minimal real call before trusting any shape above.
 
 ## How to call it
 
@@ -151,26 +151,20 @@ retry vs. fail open.
 committing to one in a request path). Larger models on the same endpoint may do
 better on harder judgments at higher cost/latency. The default is configurable —
 set `HOSTYOURAI_DECISION_MODEL` in the environment to change it everywhere this
-client is used without touching code (the decision-model landscape moves fast);
-pass `model=` explicitly on a single call to override just that call.
+client is used without touching code; pass `model=` explicitly on a single call to
+override just that call.
 
 ## Interpreting confidence
 
-Confidence (Choice/Score) is "how concentrated the probability mass is on the top
-answer" — not a correctness guarantee. A recommended banding pattern:
+Confidence (Choice/Score) measures how concentrated the probability mass is on the top
+answer — not a correctness guarantee. Band it per use case: high (e.g. ≥0.8-0.9) → act
+directly; mid → use but flag for review or escalate to a larger model; low → don't act
+automatically — usually means the deciding signal wasn't actually in `state` (see "When
+NOT to use this skill"), not that the task is hard. Noul has no confidence field; treat
+the probability the same way (e.g. ≥0.85 → act, 0.5-0.85 → review, below → "no").
 
-- **High confidence (e.g. ≥ 0.8-0.9, tune per use case)** → act on the answer directly.
-- **Mid confidence** → use the answer but flag it for review, or route to a larger/
-  slower model for a second opinion ("verify-and-escalate").
-- **Low confidence** → do not act automatically; this often means the deciding signal
-  wasn't present in `state` (see "When NOT to use this skill" above), not that the task
-  is inherently hard.
-
-Noul has no confidence field; treat the probability itself the same way (e.g. ≥0.85 →
-act, 0.5-0.85 → review, below → treat as "no").
-
-**Always validate a new threshold against a small labelled fixture set** before
-trusting it in production — see the Validation footnote below.
+Validate any new threshold against a small labelled fixture set before trusting it in
+production (see "Validation footnote" below).
 
 ## Error handling
 
@@ -203,8 +197,7 @@ trusting it in production — see the Validation footnote below.
 
 ## Worked examples
 
-**1. Routing (Choice)** — pick a task category for a user message. (This pattern is
-what this plugin's own `/hyai task auto` command uses internally.)
+**1. Routing (Choice)** — pick a task category for a user message.
 ```python
 ask(
     questions={

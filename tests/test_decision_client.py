@@ -258,14 +258,20 @@ class DecisionClientTests(unittest.TestCase):
         self.assertEqual(dc.confidence_of(answers["s"]), 0.7)
 
     def test_confidence_of_edge_cases(self):
-        self.assertIsNone(dc.confidence_of({}))
-        self.assertIsNone(dc.confidence_of({"confidence": None}))
-        self.assertIsNone(dc.confidence_of({"confidence": "0.9"}))  # string, not a number
-        self.assertIsNone(dc.confidence_of({"confidence": True}))  # bool excluded explicitly
-        self.assertIsNone(dc.confidence_of({"confidence": float("nan")}))
-        self.assertIsNone(dc.confidence_of({"confidence": float("inf")}))
-        self.assertIsNone(dc.confidence_of("not-a-dict"))
-        self.assertEqual(dc.confidence_of({"confidence": 0}), 0)  # falsy-but-valid number
+        none_cases = {
+            "missing key": {},
+            "explicit None": {"confidence": None},
+            "string, not a number": {"confidence": "0.9"},
+            "bool excluded explicitly": {"confidence": True},
+            "nan": {"confidence": float("nan")},
+            "inf": {"confidence": float("inf")},
+            "not a dict at all": "not-a-dict",
+        }
+        for label, value in none_cases.items():
+            with self.subTest(label):
+                self.assertIsNone(dc.confidence_of(value))
+        with self.subTest("falsy-but-valid number"):
+            self.assertEqual(dc.confidence_of({"confidence": 0}), 0)
 
     def test_custom_env_var_name_is_honored(self):
         with mock.patch.dict("os.environ", {"OTHER_KEY": FAKE_KEY}, clear=True):

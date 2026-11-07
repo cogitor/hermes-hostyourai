@@ -17,18 +17,9 @@ skill's shell/Python snippet via ``terminal``/``execute_code``, or from an unrel
     answers["flag"]["noul"]  # probability 0-1, no separate confidence field for noul
     # Choice/Score answers additionally carry answers[id]["confidence"] (0-1).
 
-Design notes (carried over from the ``task auto`` implementation and from empirical
-findings in local use — see hyai-decide skill for the full write-up):
-  - A thread-join timeout is used instead of relying solely on the socket timeout: a slow
-    DNS lookup or a byte-at-a-time trickle response is not reliably covered by
-    ``timeout=`` on urllib alone.
-  - Redirects are never followed — a redirect could forward the bearer key to another host.
-  - The answer body is capped in size before JSON-decoding it.
-  - Error messages never include the request/response body (which could hold prompt text
-    or, in a crafted error page, reflect the key) — only exception types are surfaced.
-  - 429/503 (rate limit / cold model) are the only statuses worth a bounded retry with
-    backoff; everything else should fail fast so a caller on a request-path budget doesn't
-    stall silently.
+Several deliberate hardening choices (thread-join timeout, no redirects, bounded response
+size, error messages that never echo request/response bodies, retry only on 429/503) are
+documented inline at the code that implements each one, not repeated here.
 """
 
 from __future__ import annotations
