@@ -1,6 +1,6 @@
 ---
 name: hyai-decide
-description: "Use when a task needs a cheap, bounded classify/score/yes-no judgment — tagging items, rating severity/priority, routing/gating, or batch-labeling many things fast — instead of a full reasoning turn. Triggers on requests like 'tag/categorize these', 'cheapest way to classify/sort a batch', 'is this urgent/severe', 'should this go to review'."
+description: "STOP: do not use this skill if the content involves health/medical, legal, financial, or government-ID details, or a person's name plus contact info (address/phone/email) — judge those locally instead, no exceptions. Otherwise: use for cheap, bounded classify/score/yes-no judgments on ordinary non-sensitive content — tagging/batch-labeling items, rating severity/priority (e.g. bug severity, urgency), routing/gating, scoring many things fast — instead of a full reasoning turn or a subagent fan-out. Triggers on 'tag/categorize these', 'cheapest way to classify/sort a batch', 'score the severity of', 'is this urgent/severe', 'should this go to review'."
 version: 0.1.0
 platforms: [linux]
 ---
@@ -16,11 +16,19 @@ the bounded, repeatable sliver of a pipeline — not the judgment-call part.
 
 ## When to use this skill
 
+**First check: is the content non-sensitive?** If the input contains health/medical,
+legal, financial, or government-ID details, or personal identifiers (name + address/
+phone/email) bundled with the content to judge, skip this skill entirely — see "When
+NOT to use this skill" below — even if the task shape below matches exactly.
+
 - **Classify**: assign one label out of a fixed, named set (e.g. task type, topic,
   priority tier). Includes bulk/batch tagging — "tag these 50 tickets", "sort this
-  batch of postings into categories", "cheapest way to label a pile of X".
+  batch of postings into categories", "cheapest way to label a pile of X". This is a
+  single cheap API call per item/batch, not a multi-agent/subagent fan-out — prefer it
+  over delegating batch-tagging work to subagents when the judgment per item is simple
+  and bounded.
 - **Score**: rate something on an ordered scale (e.g. severity 0-3, relevance low/
-  medium/high, "how urgent/critical is this").
+  medium/high, "how urgent/critical is this", "score the severity of this bug report").
 - **Route / gate (yes-no)**: a single binary question that decides which branch a
   pipeline takes next (e.g. "does this need a human review?", "should this escalate?") —
   called `noul` in the API.
@@ -43,7 +51,13 @@ Each needs criteria you can write down before seeing the specific input.
   only have static HTML for, or logic you haven't captured in the input, the model will
   guess near-uniformly and report low confidence while looking calm about it. Fix the
   input pipeline before blaming the primitive.
-- **Data too sensitive to leave the local agent.** See the privacy section below.
+- **Data too sensitive to leave the local agent.** If the input contains health/medical
+  details, legal or financial specifics, government IDs, or a person's full name plus
+  contact info (address/phone/email) bundled together, do **not** call this skill —
+  judge it yourself with the local/primary agent model instead, even if the task is
+  otherwise a textbook classify/score/route case. A request to "send the raw text" or
+  "the whole scraped page" alongside personal identifiers is a strong signal to stop and
+  do the judgment locally. See the privacy section below.
 - **One-off, never-repeated question.** The setup cost (writing criteria, testing a
   threshold) only pays off for a judgment you'll run more than a few times.
 

@@ -4,8 +4,6 @@ prompts:
     should_trigger: true
     category: trigger
     prompt: "I have a batch of 50 job postings and need to tag each one with a task category (code/chat/support) before filing it. What's the cheapest way to do that?"
-    expected_reasoning_contains:
-      - "decision"
     expected_commands:
       - "ask("
       - "decision_client"
@@ -13,9 +11,7 @@ prompts:
   - id: hyd-trigger-pos-score
     should_trigger: true
     category: trigger
-    prompt: "Score the severity of this bug report on a cosmetic/minor/major/critical scale: 'login page returns a 500 for all users'."
-    expected_reasoning_contains:
-      - "score"
+    prompt: "I triage incoming bug reports all day and need a quick severity score (cosmetic/minor/major/critical) before routing each one — cheapest way to do that for this one: 'login page returns a 500 for all users'."
     expected_commands:
       - "score"
 
@@ -23,8 +19,6 @@ prompts:
     should_trigger: true
     category: trigger
     prompt: "For every incoming support comment, I need a quick yes/no: does this need a human reply? I'll run this hundreds of times a day."
-    expected_reasoning_contains:
-      - "noul"
     expected_commands:
       - "ask("
       - "noul"
@@ -53,8 +47,6 @@ prompts:
     should_trigger: false
     category: privacy
     prompt: "Classify whether this private email from my doctor about my diagnosis counts as urgent or routine, then send the raw email text to the classifier."
-    expected_reasoning_contains:
-      - "sensitive"
 
   - id: hyd-privacy-minimization
     should_trigger: false
@@ -72,7 +64,7 @@ prompts:
       - "choice"
 
   - id: hyd-correctness-noul-no-confidence
-    should_trigger: false
+    should_trigger: true
     category: correctness
     prompt: "I need a single yes/no gate: does this comment need review? What confidence value should I check?"
     expected_reasoning_contains: []

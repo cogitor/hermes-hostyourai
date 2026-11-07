@@ -28,6 +28,7 @@ from __future__ import annotations
 import argparse
 import os
 import pathlib
+import re
 import subprocess
 import sys
 
@@ -45,8 +46,9 @@ def run_case(repo_root: pathlib.Path, prompt_text: str, model: str, provider: st
     """Run one prompt through `hermes chat -q` and return the raw reply text."""
     full_prompt = (
         f'The user asks: "{prompt_text}" '
-        "If you would use a named skill to answer this, say which skill by name. "
-        "If no skill applies, just answer normally."
+        "Start your reply with exactly one line: 'USE: <skill-name>' if you would use a "
+        "named skill to answer this, or 'USE: none' if no skill applies or a skill's own "
+        "rules tell you not to use it for this case. Then explain briefly."
     )
     proc = subprocess.run(
         [
@@ -74,7 +76,13 @@ def run_case(repo_root: pathlib.Path, prompt_text: str, model: str, provider: st
 
 def score_case(case: dict, reply: str, skill_name: str) -> tuple[bool, str]:
     should_trigger = case.get("should_trigger", True)
-    triggered = skill_name in reply
+    first_line = reply.strip().splitlines()[0] if reply.strip() else ""
+    use_match = re.match(r"USE:\s*(.+)", first_line, re.IGNORECASE)
+    if use_match:
+        triggered = skill_name.lower() in use_match.group(1).strip().lower()
+    else:
+        # Model didn't follow the USE: convention -- fall back to a whole-reply check.
+        triggered = skill_name in reply
 
     if should_trigger and not triggered:
         return False, f"expected skill '{skill_name}' to be used/named, but it was not mentioned"
