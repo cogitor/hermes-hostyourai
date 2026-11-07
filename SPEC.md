@@ -93,3 +93,61 @@ user message (its `user_message` is the original text) and does the classifying.
   retry together, and gives `chat`. A timeout does not start the pause: that message gets `chat`
   and the next one tries again. Low confidence, a too-short message and a missing key do not
   start the pause either.
+
+## `hyai-decide` skill and `decision_client.ask()`
+
+A bundled, generic skill wrapping HostYourAI's System One typed-decision API
+(`decision_client.py`) for arbitrary classify/score/route judgments from any agent task —
+distinct from, and independent of, the auto-task feature above. Auto-task has its own
+hardcoded Choice question over the eight task values, wired through its own `pre_llm_call`
+hook/middleware code path, not through this skill or `decision_client.ask()`'s public API.
+
+- **D1** The skill is off by default. It is registered with `ctx.register_skill(...)`
+  (so it becomes loadable/discoverable at all via `skill_view`) only when
+  `plugins.entries.hostyourai.settings.hyai_decide_enabled` is `true`. Default `false`.
+  Enabling or disabling takes effect the next time the plugin loads (a new session), not
+  mid-session — `register()` runs once per load, like every other plugin registration.
+- **D2** Disabling the skill specifically (`hyai_decide_enabled: false`) is independent of
+  disabling the whole plugin (`hermes plugins disable hostyourai`); either is sufficient to
+  stop the skill from loading, but only the whole-plugin toggle also stops the provider
+  profile and `/hyai` command. Only the first half (the flag lives in this plugin's own
+  config namespace, not any Hermes-core enabled/disabled state) is verified by this repo's
+  test suite — whether a whole-plugin disable also stops the provider profile and `/hyai`
+  command is a host-level behavior (Hermes core decides whether to call `register()` at
+  all) that can't be exercised from inside this plugin's own tests.
+- **D3** `decision_client.ask()`'s `model` parameter defaults to `None`, which resolves at
+  call time (not import time) to `HOSTYOURAI_DECISION_MODEL` from the environment if set and
+  non-empty, else to the `DEFAULT_MODEL` constant (`hyai/decider-2b`). An explicit `model=`
+  argument on a single call overrides both. This lets a deployment repoint every
+  `hyai-decide` call at a newer/better System One model without a code change — the
+  decision-model landscape is expected to move fast.
+- **D4** The skill's own frontmatter/body carries a structural "STOP" gate as the *first*
+  thing after the intro, not a soft exclusion clause buried later: do not use this skill if
+  the content involves health/medical, legal, financial, government-ID details, or a
+  person's name plus contact info, regardless of how the request is phrased (the gate
+  explicitly rebuts rationalizations like "it's just routing"/"it's quick"/"just an
+  excerpt"). Rationale: negative exclusions expressed only as descriptive prose are an
+  unreliable primitive for weak/cheap routing models, which match surface trigger keywords
+  far more reliably than negation logic (see the `obra/superpowers-skills`
+  `using-superpowers` meta-skill's equivalent structural-gate pattern, and Anthropic's
+  Agent Skills authoring guidance, which has no "never use when X" frontmatter primitive at
+  all — only positive what+when framing). A soft/prose-only version of this rule was tried
+  first and measurably failed to be honored before being replaced with the structural gate.
+- **D5** Behavioral/live quality of the skill's trigger wording is not covered by unit tests
+  (an LLM's routing decision isn't a unit-testable function) — it's measured by
+  `scripts/run_skill_eval.py` against `hostyourai/skills/hyai-decide/evals/{prompts,rubric}.yaml`,
+  run by hand with a real model (not part of `scripts/check.sh` or CI). The harness's own
+  pass/fail signal for a case is the model reply's first line, which every eval prompt must
+  force into the shape `USE: <skill-name>` or `USE: none` — a looser "does the skill's name
+  appear anywhere in the reply" substring check was tried first and produced false triggers
+  whenever a model explained *why it would not* use the skill (the name still appears in
+  that explanation). Trigger/privacy/correctness categories are weighted 40/35/25 toward the
+  overall score; pass threshold is 70/100. A cheap/weak routing model (tested: `hyai/auto`
+  under `hyai_routing.policy: cost`) can score far below a stronger one on the same wording
+  — this is a model-capability ceiling the skill's own wording cannot fully compensate for;
+  `hyai_routing.policy: balanced` or stronger is the expected baseline for evaluating this
+  skill's wording changes, not `cost`.
+- **D6** Code — not the decision model — owns thresholds, side effects, state changes and
+  audit logging; the model only ever returns an opinion (a probability/choice/score), never
+  a side effect by itself. This mirrors the "Jev judges, code decides" pattern from
+  comparable decision-offload designs reviewed as prior art for this skill.

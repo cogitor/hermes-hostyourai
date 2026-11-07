@@ -9,7 +9,9 @@ import time
 import unittest
 from pathlib import Path
 
+import test_decision_client
 import test_hyai_auto
+import test_hyai_router
 from test_hyai_router import FakeCtx, _load_module
 from test_hyai_usage import BALANCE, FAKE_KEY, UsageTestCase, ok
 
@@ -18,9 +20,11 @@ ROOT = Path(__file__).resolve().parent.parent
 
 class SpecCoverage(unittest.TestCase):
     def test_every_rule_in_the_spec_has_a_test(self):
-        rules = set(re.findall(r"^- \*\*([RUA]\d+)\*\*", (ROOT / "SPEC.md").read_text(), re.M))
+        rules = set(re.findall(r"^- \*\*([RUAD]\d+)\*\*", (ROOT / "SPEC.md").read_text(), re.M))
         self.assertGreaterEqual(len(rules), 30)
-        names = " ".join(dir(RoutingSpec) + dir(UsageSpec) + dir(test_hyai_auto.AutoSpec))
+        names = " ".join(
+            dir(RoutingSpec) + dir(UsageSpec) + dir(test_hyai_auto.AutoSpec) + dir(DecideSkillSpec)
+        )
         self.assertEqual(sorted(r for r in rules if f"test_{r}_" not in names), [])
 
 
@@ -222,6 +226,84 @@ class UsageSpec(UsageTestCase):
                 self.mod._cache = None
                 self.response = ok(body)
                 self.assertIsInstance(self.call("usage"), str)
+
+
+class DecideSkillSpec(unittest.TestCase):
+    """D1-D6: references the real assertions elsewhere so this stays one source of
+    truth per behavior, rather than re-testing the same thing twice."""
+
+    def test_D1_skill_registration_gated_by_config_flag_default_off(self):
+        # Full behavioral coverage (default-off, enabled-via-config, graceful no-op on an
+        # older ctx without register_skill) lives in test_hyai_router.py, which already
+        # owns FakeCtx -- this just confirms that coverage exists under the names D1 implies,
+        # rather than re-running the same assertions a second time.
+        for name in (
+            "test_bundled_skills_not_registered_by_default",
+            "test_bundled_skills_are_registered_with_ctx_when_enabled",
+        ):
+            self.assertTrue(
+                hasattr(test_hyai_router.HyaiCommandTestCase, name),
+                f"expected test_hyai_router.HyaiCommandTestCase.{name} to cover D1",
+            )
+
+    def test_D2_flag_is_read_from_this_plugins_own_config_namespace(self):
+        # What's testable in-process: the hyai_decide_enabled flag lives under this
+        # plugin's own settings and isn't coupled to any Hermes-core enabled/disabled
+        # state the plugin never reads. Whether `hermes plugins disable hostyourai` also
+        # stops the provider profile and /hyai command is a host-level behavior (Hermes
+        # core decides whether to call register() at all) that cannot be exercised from
+        # inside this plugin's own test suite.
+        mod = _load_module()
+        ctx = FakeCtx()
+        ctx.set_config("hyai_decide_enabled", True)
+        mod.register(ctx)
+        self.assertIn("hyai-decide", ctx.skills)
+        self.assertIn(mod.HYAI_DECIDE_ENABLED_KEY, ctx._store)
+
+    def test_D3_model_resolution_order_is_explicit_then_env_then_default(self):
+        # Full behavioral coverage (default/env-override/explicit-override, including
+        # the whitespace-only-env edge case) lives in test_decision_client.py, which
+        # exercises _default_model()/ask() directly — no need to duplicate it against a
+        # live stub here too. This just enforces that coverage keeps existing.
+        names = " ".join(dir(test_decision_client.DecisionClientTests))
+        for name in (
+            "test_default_model_is_decider_2b_without_env_override",
+            "test_env_var_overrides_default_model",
+            "test_whitespace_only_env_model_falls_back_to_default",
+            "test_explicit_model_overrides_env_var",
+        ):
+            self.assertIn(name, names, f"expected test_decision_client.py::{name} to cover D3")
+
+    def test_D4_skill_body_leads_with_a_structural_stop_gate(self):
+        text = (ROOT / "hostyourai" / "skills" / "hyai-decide" / "SKILL.md").read_text()
+        self.assertIn("STOP", text)
+        stop_pos = text.index("STOP")
+        when_to_use_pos = text.index("## When to use this skill")
+        self.assertLess(stop_pos, when_to_use_pos, "STOP gate must precede the trigger examples")
+        for phrase in ("it's just routing", "it's quick"):
+            self.assertIn(phrase, text)
+
+    def test_D5_eval_harness_scores_the_forced_USE_line_not_a_substring_match(self):
+        harness = (ROOT / "scripts" / "run_skill_eval.py").read_text()
+        self.assertIn("USE:", harness)
+        rubric_path = ROOT / "hostyourai" / "skills" / "hyai-decide" / "evals" / "rubric.yaml"
+        rubric = rubric_path.read_text()
+        weights = dict(re.findall(r"id:\s*(\w+)\s*\n\s*weight:\s*(\d+)", rubric))
+        self.assertEqual(weights, {"trigger": "40", "privacy": "35", "correctness": "25"})
+        threshold = re.search(r"pass_threshold:\s*(\d+)", rubric)
+        self.assertEqual(threshold.group(1), "70")
+        prompts = (ROOT / "hostyourai" / "skills" / "hyai-decide" / "evals" / "prompts.yaml").read_text()
+        self.assertIn("id: hyd-", prompts)  # sanity: file has real eval cases to force through
+
+    def test_D6_client_never_applies_a_threshold_itself(self):
+        client_text = (ROOT / "hostyourai" / "decision_client.py").read_text()
+        # confidence_of() only reads and returns the raw value; it never compares it to a
+        # fixed threshold constant or branches on a pass/fail outcome -- that judgment call
+        # stays with the caller.
+        src = re.search(r"def confidence_of.*", client_text, re.S).group(0)
+        body = src.split("\n\n")[0]
+        for banned in ("THRESHOLD", ">=", "<=", " > 0.", " < 0."):
+            self.assertNotIn(banned, body)
 
 
 if __name__ == "__main__":

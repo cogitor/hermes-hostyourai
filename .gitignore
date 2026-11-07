@@ -18,6 +18,9 @@ __pycache__/
 *.key
 *.zip
 *.bundle
+
+# Local project-skill trust scaffolding for live eval testing (never commit)
+.hermes/
 *.tar
 *.tar.gz
 config.yaml
