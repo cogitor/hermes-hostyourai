@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+## 0.4.1 — experimental hyai-decide skill
+- Adds the `hyai-decide` skill: a reusable pattern for cheap, bounded typed
+  classify/score/route judgments (choice/score/noul) against HostYourAI's System One
+  decision API, via a new standalone `hostyourai/decision_client.py` module usable from
+  `execute_code`/`terminal` independent of the `/hyai` command.
+- **Off by default.** Enable with `hyai_decide_enabled: true` in the plugin's own config
+  namespace; disabled plugins/skills never load it.
+- Decision model is now configurable: `HOSTYOURAI_DECISION_MODEL` env var overrides the
+  hardcoded `hyai/decider-2b` default; an explicit `model=` argument on a single call
+  still wins over both.
+- Structured `DecisionError.status` attribute (was a string-matched HTTP status) makes
+  the 429/503 retry check robust to message-format changes.
+- `SPEC.md` gains D1–D6 entries documenting these decisions, each enforced by a real
+  behavioral test via the existing spec-coverage meta-test.
+- Live eval (`hyai/auto`, HostYourAI): stable 93.3–100/100 across reruns (pass threshold
+  70) after a 3-way parallel code review and bloat/accuracy audit — no change to the
+  stable `hostyourai` provider profile or `/hyai task auto` path.
+
 ## 0.4.0 — BREAKING: merged into one plugin
 - **Breaking:** the two separate plugins `hyai-router` and `hostyourai-profile` are merged
   into a single plugin named `hostyourai` (directory `hostyourai/`, one `plugin.yaml`). They
