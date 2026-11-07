@@ -2,7 +2,7 @@
 name: hyai-decide
 description: "STOP: do not use this skill if the content involves health/medical, legal, financial, or government-ID details, or a person's name plus contact info (address/phone/email) — judge those locally instead, no exceptions. Otherwise: use for cheap, bounded classify/score/yes-no judgments on ordinary non-sensitive content — tagging/batch-labeling items, rating severity/priority (e.g. bug severity, urgency), routing/gating, scoring many things fast — instead of a full reasoning turn or a subagent fan-out. Triggers on 'tag/categorize these', 'cheapest way to classify/sort a batch', 'score the severity of', 'is this urgent/severe', 'should this go to review'."
 version: 0.1.0
-platforms: [linux]
+platforms: [linux, darwin, windows]
 ---
 
 # HYAI Decide: typed decisions via HostYourAI
