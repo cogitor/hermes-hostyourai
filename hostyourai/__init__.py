@@ -79,6 +79,7 @@ API_BASE = "https://hostyourai.com/api/v1"  # the only host the API key is ever 
 AUTO_BASE = "https://hostyourai.com/api/decision"  # same host: the System One API used by auto
 AUTO_TASK = "auto"
 AUTO_KEY = "hyai_auto"  # this plugin's settings for auto: model, threshold, timeout_ms, min_chars
+HYAI_DECIDE_ENABLED_KEY = "hyai_decide_enabled"  # bool; gates hyai-decide skill registration, default off
 _AUTO_CHARS = 200  # how much of each message is sent
 _AUTO_MAX_ANSWER = 65_536
 _COMPACTION_PREFIX = "[CONTEXT "  # how Hermes starts the summary it puts in place of old turns
@@ -555,12 +556,17 @@ def register(ctx) -> None:
     global _ctx
     _ctx = ctx
 
-    if hasattr(ctx, "register_skill") and ctx.get_config("hyai_decide_enabled", False):
+    if hasattr(ctx, "register_skill") and ctx.get_config(HYAI_DECIDE_ENABLED_KEY, False):
+        # older Hermes without register_skill: flag has no effect, skill stays unavailable
         skills_dir = Path(__file__).parent / "skills"
+        registered_any = False
         for child in sorted(skills_dir.iterdir()) if skills_dir.is_dir() else ():
             skill_md = child / "SKILL.md"
             if child.is_dir() and skill_md.exists():
                 ctx.register_skill(child.name, skill_md)
+                registered_any = True
+        if not registered_any and hasattr(ctx, "log"):
+            ctx.log(f"hostyourai: {HYAI_DECIDE_ENABLED_KEY} is set but no skill was found under {skills_dir}")
 
     def _handle_hyai(raw_args: str):
         parts = (raw_args or "").split()

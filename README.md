@@ -56,15 +56,19 @@ all — useful for classify/score/route judgments inside your own scripts or
 other skills.
 
 ```python
-from hostyourai.decision_client import DecisionClient
+from hostyourai.decision_client import ask, confidence_of
 
-client = DecisionClient()  # reads HOSTYOURAI_API_KEY from the environment
-result = client.ask(
-    "classify",
-    prompt="Is this support ticket urgent?",
-    choices=["urgent", "normal", "low"],
+answers = ask(
+    questions={
+        "urgency": {
+            "type": "choice",
+            "instructions": "How urgent is this support ticket?",
+            "choices": ["urgent", "normal", "low"],
+        }
+    },
+    state={"ticket_text": "..."},  # named fields only, see SKILL.md's minimization rule
 )
-print(result.choice, client.confidence_of(result))
+print(answers["urgency"]["choice"], confidence_of(answers["urgency"]))
 ```
 
 Needs `HOSTYOURAI_API_KEY` in the environment (same key as the plugin). The decision
@@ -163,9 +167,9 @@ off again. `/hyai` shows what the last message got.
 - The `hyai-decide` skill, disabled by default — enable with
   `hermes config set plugins.entries.hostyourai.settings.hyai_decide_enabled true` —
   sends one request per call to
-  `https://hostyourai.com/api/decision/v1/systemone` with your key,
-  your prompt and your choices — only what the calling task explicitly passes
-  in. Nothing is sent unless enabled and a task calls it.
+  `https://hostyourai.com/api/decision/v1/systemone` with your key, the typed
+  `questions` and the named `state` fields the calling task explicitly passes
+  in — nothing is sent unless enabled and a task calls it.
 - `/hyai usage` makes one request that only reads your balance to the same address
   with your key, only when you run it, never in a group chat, and it never
   follows a redirect. The result is kept in memory for a minute, not saved.

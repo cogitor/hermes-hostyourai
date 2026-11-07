@@ -53,7 +53,7 @@ class FrontmatterTests(unittest.TestCase):
         self.fm, self.body = split_frontmatter(self.text)
 
     def test_closes_properly_and_has_non_empty_body(self):
-        self.assertIn("\n---\n", self.text[4:] and self.text)
+        self.assertIn("\n---\n", self.text)
         self.assertTrue(self.body.strip())
 
     def test_required_fields_present(self):
@@ -85,6 +85,9 @@ class FrontmatterTests(unittest.TestCase):
         # The skill's own body only uses stdlib-only Python via execute_code/terminal,
         # so it should not be narrowed to a single OS.
         self.assertIn("linux", platforms)
+
+
+README_PATH = ROOT / "README.md"
 
 
 class CodeExampleConsistencyTests(unittest.TestCase):
@@ -151,6 +154,48 @@ class CodeExampleConsistencyTests(unittest.TestCase):
         self.assertIsNotNone(valid, "module's allowed types changed; update skill's type table")
         for t in ("choice", "score", "noul"):
             self.assertIn(f"| {t} ", self.skill_text)
+
+
+class ReadmeExampleConsistencyTests(unittest.TestCase):
+    """README.md has its own hyai-decide usage snippet, separate from SKILL.md's --
+    it drifted out of sync with the real API once already (a fabricated DecisionClient
+    class), so it gets the same import/kwarg checks CodeExampleConsistencyTests runs
+    against SKILL.md."""
+
+    def setUp(self):
+        self.readme_text = README_PATH.read_text()
+        self.client_text = CLIENT_PATH.read_text()
+
+    def test_readme_does_not_reference_a_nonexistent_decisionclient_class(self):
+        self.assertNotIn("DecisionClient", self.readme_text)
+
+    def test_readme_imported_symbols_exist_in_the_real_module(self):
+        m = re.search(r"from hostyourai\.decision_client import ([\w, ]+)", self.readme_text)
+        self.assertIsNotNone(m, "README must show the real import line")
+        for name in (s.strip() for s in m.group(1).split(",")):
+            self.assertIn(
+                f"def {name}(",
+                self.client_text,
+                f"{name!r} shown in README but not defined in module",
+            )
+
+    def test_readme_ask_kwargs_used_are_real_parameters(self):
+        sig = re.search(r"def ask\(([^)]*)\)", self.client_text, re.S).group(1)
+        real_params = set(re.findall(r"(\w+)\s*(?::|=)", sig)) | {"questions", "state"}
+        call = re.search(r"\bask\(\s*(.*?)\n\)", self.readme_text, re.S)
+        self.assertIsNotNone(call, "README must show a real ask(...) call")
+        depth = 0
+        buf = ""
+        for ch in call.group(1):
+            if ch in "{[(":
+                depth += 1
+            elif ch in "}])":
+                depth -= 1
+            if depth == 0:
+                buf += ch
+        used = set(re.findall(r"(?:^|,)\s*(\w+)\s*=", buf))
+        unknown = used - real_params
+        self.assertEqual(unknown, set(), f"README uses kwargs ask() doesn't have: {unknown}")
 
 
 if __name__ == "__main__":

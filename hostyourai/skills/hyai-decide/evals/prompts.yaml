@@ -52,14 +52,12 @@ prompts:
     should_trigger: false
     category: privacy
     prompt: "Classify this job posting's visa requirement. Here's the whole scraped page HTML plus my name, address and phone number for context."
-    expected_reasoning_contains: []
 
   # --- correctness: does the model reproduce the right API shape from the skill ---
   - id: hyd-correctness-choice-criteria-shape
     should_trigger: true
     category: correctness
     prompt: "Classify this message as either 'code' or 'chat' using the decision model. The message is: 'def foo(): return 1'"
-    expected_reasoning_contains: []
     expected_commands:
       - "choice"
 
@@ -67,4 +65,3 @@ prompts:
     should_trigger: true
     category: correctness
     prompt: "I need a single yes/no gate: does this comment need review? What confidence value should I check?"
-    expected_reasoning_contains: []

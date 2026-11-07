@@ -65,6 +65,10 @@ class DecisionError(Exception):
     only a short, generic description (exception type, HTTP status, or a fixed string).
     """
 
+    def __init__(self, message: str, *, status: int | None = None):
+        super().__init__(message)
+        self.status = status  # HTTP status code, if this came from an HTTPError; else None
+
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, *args, **kwargs):
@@ -115,7 +119,7 @@ def _call_once(
     except urllib.error.HTTPError as exc:
         status = exc.code
         exc.close()
-        raise DecisionError(f"HTTP {status}") from None
+        raise DecisionError(f"HTTP {status}", status=status) from None
     except Exception as exc:  # network/timeout/TLS: text could leak the key, log type only
         raise DecisionError(type(exc).__name__) from None
     if len(raw) > MAX_ANSWER_BYTES:
@@ -207,7 +211,7 @@ def ask(
                 questions, state, model=resolved_model, url=url, api_key=api_key, timeout_s=timeout_s
             )
         except DecisionError as exc:
-            retryable = str(exc) in ("HTTP 429", "HTTP 503")
+            retryable = exc.status in (429, 503)
             if not retryable or attempt >= retries:
                 raise
             attempt += 1

@@ -110,7 +110,11 @@ hook/middleware code path, not through this skill or `decision_client.ask()`'s p
 - **D2** Disabling the skill specifically (`hyai_decide_enabled: false`) is independent of
   disabling the whole plugin (`hermes plugins disable hostyourai`); either is sufficient to
   stop the skill from loading, but only the whole-plugin toggle also stops the provider
-  profile and `/hyai` command.
+  profile and `/hyai` command. Only the first half (the flag lives in this plugin's own
+  config namespace, not any Hermes-core enabled/disabled state) is verified by this repo's
+  test suite — whether a whole-plugin disable also stops the provider profile and `/hyai`
+  command is a host-level behavior (Hermes core decides whether to call `register()` at
+  all) that can't be exercised from inside this plugin's own tests.
 - **D3** `decision_client.ask()`'s `model` parameter defaults to `None`, which resolves at
   call time (not import time) to `HOSTYOURAI_DECISION_MODEL` from the environment if set and
   non-empty, else to the `DEFAULT_MODEL` constant (`hyai/decider-2b`). An explicit `model=`

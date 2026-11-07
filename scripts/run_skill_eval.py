@@ -82,7 +82,7 @@ def score_case(case: dict, reply: str, skill_name: str) -> tuple[bool, str]:
         triggered = skill_name.lower() in use_match.group(1).strip().lower()
     else:
         # Model didn't follow the USE: convention -- fall back to a whole-reply check.
-        triggered = skill_name in reply
+        triggered = skill_name.lower() in reply.lower()
 
     if should_trigger and not triggered:
         return False, f"expected skill '{skill_name}' to be used/named, but it was not mentioned"
@@ -120,8 +120,17 @@ def main() -> int:
     prompts_data = load_yaml(evals_dir / "prompts.yaml")
     rubric_data = load_yaml(evals_dir / "rubric.yaml")
     cases = prompts_data.get("prompts", [])
-    weights = {c["id"]: c["weight"] for c in rubric_data.get("checks", [])}
+    category_weights = {c["id"]: c["weight"] for c in rubric_data.get("checks", [])}
     pass_threshold = rubric_data.get("scoring", {}).get("pass_threshold", 70)
+    unknown_categories = {c.get("category", "uncategorized") for c in cases} - set(category_weights)
+    if unknown_categories:
+        print(
+            f"ERROR: prompts.yaml uses categor{'y' if len(unknown_categories) == 1 else 'ies'} "
+            f"{sorted(unknown_categories)} not present in rubric.yaml's weights {sorted(category_weights)} "
+            "— fix the typo/add the category to rubric.yaml before scoring means anything.",
+            file=sys.stderr,
+        )
+        return 2
 
     print(f"Running {len(cases)} case(s) for skill '{skill_name}' against {args.model} ({args.provider})...")
     print()
@@ -157,12 +166,12 @@ def main() -> int:
     print(f" SKILL EVAL: {skill_name}")
     print("=" * 70)
 
-    total_weight = sum(weights.values()) or 100
+    total_weight = sum(category_weights.values()) or 100
     weighted_score = 0.0
     for category, total in category_totals.items():
         passed = category_passed.get(category, 0)
         rate = (passed / total * 100) if total else 0.0
-        weight = weights.get(category, 0)
+        weight = category_weights.get(category, 0)
         weighted_score += rate * weight / total_weight if total_weight else 0
         status = "OK" if passed == total else "FAIL"
         print(f"  {status:5} {category:15} {passed}/{total}  ({rate:.1f}%)  weight={weight}")

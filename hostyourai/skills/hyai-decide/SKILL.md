@@ -32,10 +32,8 @@ Common wrong reasons to skip this gate — reject them:
 
 ## When to use this skill
 
-**First check: is the content non-sensitive?** If the input contains health/medical,
-legal, financial, or government-ID details, or personal identifiers (name + address/
-phone/email) bundled with the content to judge, skip this skill entirely — see "When
-NOT to use this skill" below — even if the task shape below matches exactly.
+**First check the STOP gate above** — if the content is sensitive, skip this skill
+entirely regardless of how well the task shape below matches.
 
 - **Classify**: assign one label out of a fixed, named set (e.g. task type, topic,
   priority tier). Includes bulk/batch tagging — "tag these 50 tickets", "sort this
@@ -67,13 +65,11 @@ Each needs criteria you can write down before seeing the specific input.
   only have static HTML for, or logic you haven't captured in the input, the model will
   guess near-uniformly and report low confidence while looking calm about it. Fix the
   input pipeline before blaming the primitive.
-- **Data too sensitive to leave the local agent.** If the input contains health/medical
-  details, legal or financial specifics, government IDs, or a person's full name plus
-  contact info (address/phone/email) bundled together, do **not** call this skill —
-  judge it yourself with the local/primary agent model instead, even if the task is
-  otherwise a textbook classify/score/route case. A request to "send the raw text" or
-  "the whole scraped page" alongside personal identifiers is a strong signal to stop and
-  do the judgment locally. See the privacy section below.
+- **Data too sensitive to leave the local agent.** See the STOP gate above — same
+  content categories, no exceptions. A request to "send the raw text" or "the whole
+  scraped page" alongside personal identifiers is a strong signal to stop and do the
+  judgment locally. See the privacy section below for the minimization rule that still
+  applies to everything else you do send.
 - **One-off, never-repeated question.** The setup cost (writing criteria, testing a
   threshold) only pays off for a judgment you'll run more than a few times.
 

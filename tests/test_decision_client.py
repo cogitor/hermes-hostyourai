@@ -96,6 +96,11 @@ class DecisionClientTests(unittest.TestCase):
             dc.ask({"q": {"type": "noul", "instructions": "x"}}, {}, url=self.stub.base)
         self.assertEqual(self.stub.requests[-1]["body"]["model"], "hyai/some-newer-model")
 
+    def test_whitespace_only_env_model_falls_back_to_default(self):
+        with mock.patch.dict("os.environ", {"HOSTYOURAI_DECISION_MODEL": "   "}):
+            dc.ask({"q": {"type": "noul", "instructions": "x"}}, {}, url=self.stub.base)
+        self.assertEqual(self.stub.requests[-1]["body"]["model"], dc.DEFAULT_MODEL)
+
     def test_explicit_model_overrides_env_var(self):
         with mock.patch.dict("os.environ", {"HOSTYOURAI_DECISION_MODEL": "hyai/some-newer-model"}):
             dc.ask(

@@ -11,6 +11,7 @@ import unittest.mock
 from pathlib import Path
 
 import test_hyai_auto
+import test_hyai_router
 from test_decision_client import FAKE_KEY as DECISION_FAKE_KEY
 from test_decision_client import Stub as DecisionStub
 from test_decision_client import dc
@@ -235,23 +236,32 @@ class DecideSkillSpec(unittest.TestCase):
     truth per behavior, rather than re-testing the same thing twice."""
 
     def test_D1_skill_registration_gated_by_config_flag_default_off(self):
-        mod = _load_module()
-        ctx = FakeCtx()
-        mod.register(ctx)
-        self.assertNotIn("hyai-decide", ctx.skills)  # default false
-        ctx2 = FakeCtx()
-        ctx2.set_config("hyai_decide_enabled", True)
-        mod.register(ctx2)
-        self.assertIn("hyai-decide", ctx2.skills)
+        # Full behavioral coverage (default-off, enabled-via-config, graceful no-op on an
+        # older ctx without register_skill) lives in test_hyai_router.py, which already
+        # owns FakeCtx -- this just confirms that coverage exists under the names D1 implies,
+        # rather than re-running the same assertions a second time.
+        for name in (
+            "test_bundled_skills_not_registered_by_default",
+            "test_bundled_skills_are_registered_with_ctx_when_enabled",
+        ):
+            self.assertTrue(
+                hasattr(test_hyai_router.HyaiCommandTestCase, name),
+                f"expected test_hyai_router.HyaiCommandTestCase.{name} to cover D1",
+            )
 
-    def test_D2_skill_flag_and_whole_plugin_toggle_are_independent_knobs(self):
-        # The flag lives in this plugin's own config namespace, not coupled to any
-        # Hermes-side plugins.enabled/disabled state the plugin never reads.
+    def test_D2_flag_is_read_from_this_plugins_own_config_namespace(self):
+        # What's testable in-process: the hyai_decide_enabled flag lives under this
+        # plugin's own settings and isn't coupled to any Hermes-core enabled/disabled
+        # state the plugin never reads. Whether `hermes plugins disable hostyourai` also
+        # stops the provider profile and /hyai command is a host-level behavior (Hermes
+        # core decides whether to call register() at all) that cannot be exercised from
+        # inside this plugin's own test suite.
         mod = _load_module()
         ctx = FakeCtx()
         ctx.set_config("hyai_decide_enabled", True)
         mod.register(ctx)
-        self.assertIn("hyai-decide", ctx.skills)  # registers independent of plugin enable state
+        self.assertIn("hyai-decide", ctx.skills)
+        self.assertIn(mod.HYAI_DECIDE_ENABLED_KEY, ctx._store)
 
     def test_D3_model_resolution_order_is_explicit_then_env_then_default(self):
         stub = DecisionStub()
@@ -285,10 +295,15 @@ class DecideSkillSpec(unittest.TestCase):
     def test_D5_eval_harness_scores_the_forced_USE_line_not_a_substring_match(self):
         harness = (ROOT / "scripts" / "run_skill_eval.py").read_text()
         self.assertIn("USE:", harness)
-        rubric = (ROOT / "hostyourai" / "skills" / "hyai-decide" / "evals" / "rubric.yaml").read_text()
-        for category in ("trigger", "privacy", "correctness"):
-            self.assertIn(category, rubric)
-        self.assertIn("70", rubric)
+        rubric_path = ROOT / "hostyourai" / "skills" / "hyai-decide" / "evals" / "rubric.yaml"
+        rubric = rubric_path.read_text()
+        weights = dict(re.findall(r"id:\s*(\w+)\s*\n\s*weight:\s*(\d+)", rubric))
+        self.assertEqual(weights, {"trigger": "40", "privacy": "35", "correctness": "25"})
+        threshold = re.search(r"pass_threshold:\s*(\d+)", rubric)
+        self.assertEqual(threshold.group(1), "70")
+        prompts = (ROOT / "hostyourai" / "skills" / "hyai-decide" / "evals" / "prompts.yaml").read_text()
+        self.assertIn("id: hyd-", prompts)  # sanity: file has real eval cases to force through
+        self.assertIn("USE:", harness)  # harness forces the USE: <skill>|none first-line shape
 
     def test_D6_client_never_applies_a_threshold_itself(self):
         client_text = (ROOT / "hostyourai" / "decision_client.py").read_text()
