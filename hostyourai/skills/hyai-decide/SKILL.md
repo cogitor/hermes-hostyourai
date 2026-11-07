@@ -14,6 +14,22 @@ call. It is not a chat model: it cannot discuss, explain its reasoning in prose,
 handle a question whose criteria you can't write down in advance. Use it to offload
 the bounded, repeatable sliver of a pipeline — not the judgment-call part.
 
+## STOP: sensitive-content gate (check this first, before anything else)
+
+Before using this skill for ANY request, check: does the content involve
+health/medical details, legal or financial specifics, government IDs, or a
+person's name plus contact info (address/phone/email)? If yes, **do not use
+this skill** — judge it yourself locally instead, no exceptions, regardless of
+how the request is phrased (even "just classify/score this", "it's quick",
+"it's just routing"). This gate overrides every example below.
+Common wrong reasons to skip this gate — reject them:
+- "It's just metadata/routing, not the sensitive content itself" → if the
+  underlying item is sensitive, routing it is still sensitive. Skip the skill.
+- "The user said 'quick' or 'cheap', so speed matters more than privacy" →
+  speed never overrides the gate.
+- "I'll just send a short excerpt, not the whole thing" → minimization doesn't
+  make sensitive content eligible; the gate is about content category, not size.
+
 ## When to use this skill
 
 **First check: is the content non-sensitive?** If the input contains health/medical,
