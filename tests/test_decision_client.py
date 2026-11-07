@@ -87,6 +87,25 @@ class DecisionClientTests(unittest.TestCase):
                 dc.ask(bad, {}, url=self.stub.base)
         self.assertEqual(self.stub.requests, [])
 
+    def test_default_model_is_decider_2b_without_env_override(self):
+        dc.ask({"q": {"type": "noul", "instructions": "x"}}, {}, url=self.stub.base)
+        self.assertEqual(self.stub.requests[-1]["body"]["model"], dc.DEFAULT_MODEL)
+
+    def test_env_var_overrides_default_model(self):
+        with mock.patch.dict("os.environ", {"HOSTYOURAI_DECISION_MODEL": "hyai/some-newer-model"}):
+            dc.ask({"q": {"type": "noul", "instructions": "x"}}, {}, url=self.stub.base)
+        self.assertEqual(self.stub.requests[-1]["body"]["model"], "hyai/some-newer-model")
+
+    def test_explicit_model_overrides_env_var(self):
+        with mock.patch.dict("os.environ", {"HOSTYOURAI_DECISION_MODEL": "hyai/some-newer-model"}):
+            dc.ask(
+                {"q": {"type": "noul", "instructions": "x"}},
+                {},
+                url=self.stub.base,
+                model="hyai/explicit-choice",
+            )
+        self.assertEqual(self.stub.requests[-1]["body"]["model"], "hyai/explicit-choice")
+
     def test_missing_key_raises_without_a_network_call(self):
         with mock.patch.dict("os.environ", clear=True):
             with self.assertRaises(dc.DecisionError):

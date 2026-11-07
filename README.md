@@ -67,7 +67,9 @@ result = client.ask(
 print(result.choice, client.confidence_of(result))
 ```
 
-Needs `HOSTYOURAI_API_KEY` in the environment (same key as the plugin). See
+Needs `HOSTYOURAI_API_KEY` in the environment (same key as the plugin). The decision
+model defaults to `hyai/decider-2b`; set `HOSTYOURAI_DECISION_MODEL` in the
+environment to point it at a different model without a code change — see
 [`hostyourai/skills/hyai-decide/SKILL.md`](hostyourai/skills/hyai-decide/SKILL.md)
 for the full contract (ask/confidence_of, retries, timeouts) and when an
 agent should reach for it.

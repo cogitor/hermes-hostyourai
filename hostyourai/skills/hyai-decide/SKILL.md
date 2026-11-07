@@ -153,7 +153,10 @@ retry vs. fail open.
 `model` defaults to `hyai/decider-2b`, a small classifier model (verify against
 `GET /v1/models`, not wrapped by this client, for what's currently warm before
 committing to one in a request path). Larger models on the same endpoint may do
-better on harder judgments at higher cost/latency.
+better on harder judgments at higher cost/latency. The default is configurable —
+set `HOSTYOURAI_DECISION_MODEL` in the environment to change it everywhere this
+client is used without touching code (the decision-model landscape moves fast);
+pass `model=` explicitly on a single call to override just that call.
 
 ## Interpreting confidence
 

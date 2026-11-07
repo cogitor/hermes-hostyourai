@@ -47,6 +47,17 @@ DEFAULT_MODEL = "hyai/decider-2b"
 MAX_ANSWER_BYTES = 65_536
 
 
+def _default_model() -> str:
+    """The model ``ask()`` uses when the caller doesn't pass one explicitly.
+
+    Reads ``HOSTYOURAI_DECISION_MODEL`` from the environment at call time (not import
+    time), falling back to ``DEFAULT_MODEL``. The decision-model landscape moves fast —
+    this lets a deployment point at a newer/better System One model without a code change,
+    the same way ``HOSTYOURAI_API_KEY`` is read from the environment rather than hardcoded.
+    """
+    return os.environ.get("HOSTYOURAI_DECISION_MODEL", "").strip() or DEFAULT_MODEL
+
+
 class DecisionError(Exception):
     """The service failed, answered badly, or ran out of time.
 
@@ -156,7 +167,7 @@ def ask(
     questions: dict,
     state: dict,
     *,
-    model: str = DEFAULT_MODEL,
+    model: str | None = None,
     url: str = DEFAULT_URL,
     timeout_ms: int = 2000,
     retries: int = 0,
@@ -164,6 +175,10 @@ def ask(
     env_var: str = "HOSTYOURAI_API_KEY",
 ) -> dict:
     """Ask HostYourAI's System One model one or more typed questions about ``state``.
+
+    ``model``: defaults to ``HOSTYOURAI_DECISION_MODEL`` from the environment, or
+    ``DEFAULT_MODEL`` if that isn't set — see ``_default_model()``. Pass an explicit
+    model to override both for this one call.
 
     ``questions``: dict of question-id -> {"type": "choice"|"score"|"noul", "instructions": str,
       "criteria": ...}. Question ids are never sent to the model; put all meaning the model
@@ -183,12 +198,13 @@ def ask(
     """
     _validate_questions(questions)
     api_key = _api_key(env_var)
+    resolved_model = model if model is not None else _default_model()
     timeout_s = timeout_ms / 1000
     attempt = 0
     while True:
         try:
             return _call_with_hard_timeout(
-                questions, state, model=model, url=url, api_key=api_key, timeout_s=timeout_s
+                questions, state, model=resolved_model, url=url, api_key=api_key, timeout_s=timeout_s
             )
         except DecisionError as exc:
             retryable = str(exc) in ("HTTP 429", "HTTP 503")
